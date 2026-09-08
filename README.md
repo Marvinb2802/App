@@ -50,24 +50,31 @@ Oberfläche sie zuverlässig darstellen kann.
 
 ```bash
 npm install
-cp .env.example .env.local     # und ausfüllen, siehe unten
-npm run dev                    # http://localhost:3000
+npm run dev        # http://localhost:3000
 ```
 
-Pflicht sind nur zwei Werte: `DATABASE_URL` und `SESSION_SECRET`. Eine kostenlose
-Postgres-Datenbank gibt es in zwei Minuten bei [Neon](https://neon.tech) oder
-[Supabase](https://supabase.com) — die Verbindungszeichenkette von dort kopieren und
-eintragen. Die Tabellen legt Pacer beim ersten Aufruf selbst an.
+Mehr ist zum Anschauen nicht nötig. Ohne `DATABASE_URL` startet Pacer in der
+Entwicklung ein eingebettetes Postgres ([PGlite](https://pglite.dev)) und legt seine
+Daten unter `data/pgdata` ab — keine Registrierung, keine Einrichtung. Auf der
+Startseite dann **„Mit Demo-Daten ansehen"** klicken: Kennzahlen, Diagramme und alle
+Seiten funktionieren sofort, ohne Strava-Account und ohne API-Key.
 
-Auf der Startseite gibt es dann **„Mit Demo-Daten ansehen"** — damit läuft die komplette
-App inklusive Kennzahlen ohne Strava-Account und ohne API-Key.
+Für echte Strava-Daten und die KI-Funktionen kommen Schlüssel dazu:
+
+```bash
+cp .env.example .env.local     # und ausfüllen, siehe Tabelle unten
+```
+
+In Produktion gibt es das eingebettete Postgres **nicht** — dort ist `DATABASE_URL`
+Pflicht, weil gehostete Umgebungen meist kein dauerhaftes Dateisystem haben und
+stillschweigend verschwindende Daten schlimmer wären als eine klare Fehlermeldung.
 
 ## Konfiguration (`.env.local`)
 
 | Variable | Pflicht | Wofür |
 |---|---|---|
-| `DATABASE_URL` | **ja** | Postgres-Verbindung, z. B. von Neon oder Supabase |
-| `SESSION_SECRET` | **ja** (Produktion) | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `DATABASE_URL` | in Produktion | Postgres-Verbindung, z. B. von Neon oder Supabase. Lokal optional — ohne sie läuft ein eingebettetes Postgres |
+| `SESSION_SECRET` | in Produktion | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `APP_URL` | ja | Basis-URL, lokal `http://localhost:3000` |
 | `STRAVA_CLIENT_ID` | für Strava | aus den [Strava-API-Einstellungen](https://www.strava.com/settings/api) |
 | `STRAVA_CLIENT_SECRET` | für Strava | ebenda |
@@ -111,7 +118,7 @@ src/
       strava/sync/            Aktivitäten nachladen
       ai/analysis/ plan/ chat/
   lib/
-    db.ts                     Postgres-Pool, Abfragehelfer und Schema
+    db.ts                     Postgres bzw. eingebettetes PGlite, Helfer, Schema
     session.ts                HMAC-signiertes Session-Cookie
     strava.ts                 OAuth, Token-Refresh, Sync
     metrics.ts                Belastung, CTL/ATL/TSB, Wochen, Lagebild
@@ -122,7 +129,7 @@ src/
 ```
 
 **Technik:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS 4,
-Postgres über `pg`, `@anthropic-ai/sdk`, Zod.
+Postgres über `pg` (lokal PGlite), `@anthropic-ai/sdk`, Zod.
 
 Die Diagrammfarben (Blau / Orange / Grün) sind gegen die dunkle Diagrammfläche auf
 Helligkeitsband, Sättigung, Kontrast und Unterscheidbarkeit bei Farbsehschwäche

@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Der Postgres-Treiber wird zur Laufzeit geladen, nicht mitgebuendelt.
-  serverExternalPackages: ["pg"],
+  // Datenbanktreiber werden zur Laufzeit geladen, nicht mitgebuendelt.
+  serverExternalPackages: ["pg", "@electric-sql/pglite"],
 };
 
 export default nextConfig;

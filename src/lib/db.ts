@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import pg from "pg";
 
 /**
@@ -9,9 +11,29 @@ import pg from "pg";
 // Zahlen sein - beide liegen weit unter Number.MAX_SAFE_INTEGER.
 pg.types.setTypeParser(pg.types.builtins.INT8, (value) => Number.parseInt(value, 10));
 
+/**
+ * Beide Treiber koennen dasselbe: eine Anweisung mit Positionsparametern
+ * ausfuehren. Mehr braucht die App nicht.
+ */
+export type Executor = {
+  query(sql: string, values: unknown[]): Promise<{ rows: unknown[] }>;
+};
+
 const globalForDb = globalThis as unknown as {
-  __pool?: pg.Pool;
+  __db?: Promise<Backend>;
   __migrated?: Promise<void>;
+};
+
+type Backend = {
+  executor: Executor;
+  /** Fuehrt mehrere Anweisungen gemeinsam aus; bei einem Fehler wird zurueckgerollt. */
+  transaction<T>(run: (tx: Executor) => Promise<T>): Promise<T>;
+  /**
+   * Fuehrt ein Skript aus mehreren Anweisungen aus. PGlite nimmt in `query`
+   * nur eine einzelne Anweisung an und braucht dafuer einen eigenen Weg.
+   */
+  runScript(sql: string): Promise<void>;
+  label: string;
 };
 
 export class DatabaseNotConfiguredError extends Error {
@@ -21,27 +43,81 @@ export class DatabaseNotConfiguredError extends Error {
   }
 }
 
+/**
+ * Ohne DATABASE_URL laeuft die App in der Entwicklung auf einem eingebetteten
+ * Postgres (PGlite), das seine Daten unter ./data/pgdata ablegt. So kann man
+ * die App ansehen, ohne vorher eine Datenbank einzurichten.
+ * In Produktion gibt es diesen Rueckfall nicht: dort fehlt in der Regel ein
+ * dauerhaftes Dateisystem, und stillschweigend verschwindende Daten waeren
+ * schlimmer als eine klare Fehlermeldung.
+ */
 export function isDatabaseConfigured(): boolean {
-  return Boolean(process.env.DATABASE_URL);
+  return Boolean(process.env.DATABASE_URL) || process.env.NODE_ENV !== "production";
 }
 
-function getPool(): pg.Pool {
-  if (globalForDb.__pool) return globalForDb.__pool;
-
+async function createBackend(): Promise<Backend> {
   const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new DatabaseNotConfiguredError();
 
-  globalForDb.__pool = new pg.Pool({
-    connectionString,
-    // Gehostete Datenbanken (Neon, Supabase) verlangen TLS, ein lokaler
-    // Postgres kann es nicht. Die Verbindungszeichenkette entscheidet.
-    ssl: /\bsslmode=(require|verify-full)\b/.test(connectionString)
-      ? { rejectUnauthorized: false }
-      : undefined,
-    max: 5,
-  });
+  if (connectionString) {
+    const pool = new pg.Pool({
+      connectionString,
+      // Gehostete Datenbanken (Neon, Supabase) verlangen TLS, ein lokaler
+      // Postgres kann es nicht. Die Verbindungszeichenkette entscheidet.
+      ssl: /\bsslmode=(require|verify-full)\b/.test(connectionString)
+        ? { rejectUnauthorized: false }
+        : undefined,
+      max: 5,
+    });
 
-  return globalForDb.__pool;
+    return {
+      executor: pool,
+      label: "Postgres",
+      runScript: async (sql) => {
+        await pool.query(sql);
+      },
+      async transaction(run) {
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+          const result = await run(client);
+          await client.query("COMMIT");
+          return result;
+        } catch (error) {
+          await client.query("ROLLBACK");
+          throw error;
+        } finally {
+          client.release();
+        }
+      },
+    };
+  }
+
+  if (process.env.NODE_ENV === "production") throw new DatabaseNotConfiguredError();
+
+  const { PGlite } = await import("@electric-sql/pglite");
+  const directory = path.join(process.cwd(), "data", "pgdata");
+  fs.mkdirSync(directory, { recursive: true }); // PGlite legt den Ordner nicht selbst an
+  const pglite = new PGlite(directory);
+  console.info(
+    "[db] Kein DATABASE_URL gesetzt - es laeuft ein eingebettetes Postgres unter ./data/pgdata.",
+  );
+
+  return {
+    executor: pglite,
+    label: "PGlite (eingebettet)",
+    runScript: (sql) => pglite.exec(sql).then(() => undefined),
+    transaction: (run) => pglite.transaction((tx) => run(tx)),
+  };
+}
+
+function getBackend(): Promise<Backend> {
+  if (!globalForDb.__db) {
+    globalForDb.__db = createBackend().catch((error: unknown) => {
+      globalForDb.__db = undefined;
+      throw error;
+    });
+  }
+  return globalForDb.__db;
 }
 
 /**
@@ -80,7 +156,8 @@ function prepare(text: string, params?: Params): [string, unknown[]] {
 export async function queryAll<T>(text: string, params?: Params): Promise<T[]> {
   await ensureMigrated();
   const [sql, values] = prepare(text, params);
-  const result = await getPool().query(sql, values);
+  const { executor } = await getBackend();
+  const result = await executor.query(sql, values);
   return result.rows as T[];
 }
 
@@ -99,22 +176,10 @@ export async function execute(text: string, params?: Params): Promise<void> {
  * Fuehrt mehrere Anweisungen auf einer Verbindung als eine Transaktion aus.
  * Bei einem Fehler wird alles zurueckgerollt.
  */
-export async function transaction<T>(
-  run: (client: pg.PoolClient) => Promise<T>,
-): Promise<T> {
+export async function transaction<T>(run: (tx: Executor) => Promise<T>): Promise<T> {
   await ensureMigrated();
-  const client = await getPool().connect();
-  try {
-    await client.query("BEGIN");
-    const result = await run(client);
-    await client.query("COMMIT");
-    return result;
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
+  const backend = await getBackend();
+  return backend.transaction(run);
 }
 
 /** Wie `prepare`, aber fuer Anweisungen innerhalb einer Transaktion. */
@@ -230,9 +295,8 @@ const SCHEMA = `
 /** Legt das Schema beim ersten Zugriff an. Laeuft genau einmal je Prozess. */
 function ensureMigrated(): Promise<void> {
   if (!globalForDb.__migrated) {
-    globalForDb.__migrated = getPool()
-      .query(SCHEMA)
-      .then(() => undefined)
+    globalForDb.__migrated = getBackend()
+      .then((backend) => backend.runScript(SCHEMA))
       .catch((error: unknown) => {
         // Ein Fehlschlag darf sich nicht als "erledigt" merken.
         globalForDb.__migrated = undefined;

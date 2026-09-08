@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
+    "@electric-sql/pglite": "^0.5.8",
     "next": "^15.5.4",
     "pg": "^8.23.0",
     "react": "^19.1.0",
