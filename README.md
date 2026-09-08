@@ -46,7 +46,15 @@ Sportartenverteilung.
 Beide strukturierten Antworten laufen über erzwungene JSON-Schemata, damit die
 Oberfläche sie zuverlässig darstellen kann.
 
-## Schnellstart
+## Ohne Installation ausprobieren
+
+Wer nichts auf dem eigenen Rechner installieren möchte, öffnet das Repository in
+**GitHub Codespaces**: auf der GitHub-Seite auf **Code → Codespaces → Create codespace**.
+Node ist dort vorinstalliert, `npm install` und `npm run dev` laufen von selbst, und
+Pacer öffnet sich anschließend in einem neuen Browser-Tab. Die Konfiguration dafür
+steht in `.devcontainer/devcontainer.json`.
+
+## Schnellstart (auf dem eigenen Rechner)
 
 ```bash
 npm install

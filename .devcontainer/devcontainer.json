@@ -1,0 +1,24 @@
+{
+  "name": "Pacer",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
+
+  // Laeuft einmal, wenn der Codespace erstellt wird.
+  "postCreateCommand": "npm install",
+
+  // Startet den Entwicklungsserver, sobald man den Codespace oeffnet.
+  "postAttachCommand": "npm run dev",
+
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Pacer",
+      "onAutoForward": "openBrowser"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["bradlc.vscode-tailwindcss"]
+    }
+  }
+}
