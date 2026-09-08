@@ -54,15 +54,12 @@ async function createBackend(): Promise<Backend> {
   const connectionString = process.env.DATABASE_URL;
 
   if (connectionString) {
-    const pool = new pg.Pool({
-      connectionString,
-      // Gehostete Datenbanken (Neon, Supabase) verlangen TLS, ein lokaler
-      // Postgres kann es nicht. Die Verbindungszeichenkette entscheidet.
-      ssl: /\bsslmode=(require|verify-full)\b/.test(connectionString)
-        ? { rejectUnauthorized: false }
-        : undefined,
-      max: 5,
-    });
+    // TLS wird nicht hier festgelegt, sondern aus der Verbindungszeichenkette
+    // gelesen: "sslmode=require" prueft bei node-postgres das Zertifikat
+    // vollstaendig. Frueher wurde die Pruefung hier abgeschaltet - unnoetig,
+    // denn Neon und Supabase haben gueltige Zertifikate. Wer einen Server mit
+    // selbst signiertem Zertifikat nutzt, haengt "sslmode=no-verify" an.
+    const pool = new pg.Pool({ connectionString, max: 5 });
 
     return {
       executor: pool,

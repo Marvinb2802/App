@@ -43,7 +43,18 @@ function credentials(): { clientId: string; clientSecret: string } {
 }
 
 export function appUrl(): string {
-  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  // Ein leer gesetztes APP_URL zaehlt wie nicht gesetzt - sonst entstuenden
+  // ungueltige Adressen statt eines brauchbaren Rueckfalls.
+  const configured = process.env.APP_URL?.trim();
+  if (configured) return configured.replace(/\/$/, "");
+
+  // Auf Vercel steht die eigene Adresse in der Umgebung. Dann muss man
+  // APP_URL nicht von Hand pflegen.
+  const hosted =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() || process.env.VERCEL_URL?.trim();
+  if (hosted) return `https://${hosted}`;
+
+  return "http://localhost:3000";
 }
 
 export function redirectUri(): string {
