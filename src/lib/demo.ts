@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { NOW_SQL, execute, queryOne } from "@/lib/db";
 import { storeActivities, type SummaryActivity } from "@/lib/strava";
 
 /**
@@ -65,20 +65,20 @@ function speedFor(sport: "Run" | "Ride", intensity: number): number {
   return threshold * (0.62 + intensity * 0.38);
 }
 
-export function seedDemoData(): void {
-  const db = getDb();
-
-  db.prepare(
+export async function seedDemoData(): Promise<void> {
+  await execute(
     `INSERT INTO athletes (id, firstname, lastname, city, country, sex, weight_kg, max_hr, threshold_hr, goal)
-     VALUES (@id, 'Demo', 'Athlet', 'Freiburg', 'Deutschland', 'M', 72, 191, 172,
+     VALUES ($1, 'Demo', 'Athlet', 'Freiburg', 'Deutschland', 'M', 72, 191, 172,
              'Halbmarathon unter 1:30 h')
-     ON CONFLICT(id) DO UPDATE SET updated_at = datetime('now')`,
-  ).run({ id: DEMO_ATHLETE_ID });
+     ON CONFLICT(id) DO UPDATE SET updated_at = ${NOW_SQL}`,
+    [DEMO_ATHLETE_ID],
+  );
 
-  const alreadySeeded = db
-    .prepare("SELECT COUNT(*) AS count FROM activities WHERE athlete_id = ?")
-    .get(DEMO_ATHLETE_ID) as { count: number };
-  if (alreadySeeded.count > 0) return;
+  const alreadySeeded = await queryOne<{ count: number }>(
+    "SELECT COUNT(*) AS count FROM activities WHERE athlete_id = $1",
+    [DEMO_ATHLETE_ID],
+  );
+  if ((alreadySeeded?.count ?? 0) > 0) return;
 
   const random = seededRandom(20260908);
   const weeks = 30;
@@ -131,12 +131,13 @@ export function seedDemoData(): void {
     });
   }
 
-  storeActivities(DEMO_ATHLETE_ID, activities);
+  await storeActivities(DEMO_ATHLETE_ID, activities);
 
-  db.prepare(
-    `INSERT INTO sync_state (athlete_id, last_synced_at) VALUES (?, datetime('now'))
-     ON CONFLICT(athlete_id) DO UPDATE SET last_synced_at = datetime('now')`,
-  ).run(DEMO_ATHLETE_ID);
+  await execute(
+    `INSERT INTO sync_state (athlete_id, last_synced_at) VALUES ($1, ${NOW_SQL})
+     ON CONFLICT(athlete_id) DO UPDATE SET last_synced_at = ${NOW_SQL}`,
+    [DEMO_ATHLETE_ID],
+  );
 }
 
 export function isDemoAthlete(athleteId: number): boolean {

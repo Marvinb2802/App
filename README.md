@@ -2,7 +2,7 @@
 
 Pacer wertet dein Ausdauertraining sportwissenschaftlich aus, erklärt dir mit Claude
 deine Form und schreibt dir einen Trainingsplan, der zu deinem tatsächlichen Niveau
-passt. Die Aktivitäten kommen aus Strava.
+passt. Die Aktivitäten kommen aus Strava, gespeichert wird in Postgres.
 
 > Pacer ist ein eigenständiges Angebot und gehört nicht zu Strava. Strava ist
 > ausschließlich Datenquelle. Wer die App öffentlich betreibt, muss die
@@ -54,19 +54,24 @@ cp .env.example .env.local     # und ausfüllen, siehe unten
 npm run dev                    # http://localhost:3000
 ```
 
-Auf der Startseite gibt es **„Mit Demo-Daten ansehen"** — damit läuft die komplette
+Pflicht sind nur zwei Werte: `DATABASE_URL` und `SESSION_SECRET`. Eine kostenlose
+Postgres-Datenbank gibt es in zwei Minuten bei [Neon](https://neon.tech) oder
+[Supabase](https://supabase.com) — die Verbindungszeichenkette von dort kopieren und
+eintragen. Die Tabellen legt Pacer beim ersten Aufruf selbst an.
+
+Auf der Startseite gibt es dann **„Mit Demo-Daten ansehen"** — damit läuft die komplette
 App inklusive Kennzahlen ohne Strava-Account und ohne API-Key.
 
 ## Konfiguration (`.env.local`)
 
 | Variable | Pflicht | Wofür |
 |---|---|---|
+| `DATABASE_URL` | **ja** | Postgres-Verbindung, z. B. von Neon oder Supabase |
+| `SESSION_SECRET` | **ja** (Produktion) | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `APP_URL` | ja | Basis-URL, lokal `http://localhost:3000` |
 | `STRAVA_CLIENT_ID` | für Strava | aus den [Strava-API-Einstellungen](https://www.strava.com/settings/api) |
 | `STRAVA_CLIENT_SECRET` | für Strava | ebenda |
 | `ANTHROPIC_API_KEY` | für die KI | aus der [Anthropic Console](https://console.anthropic.com/settings/keys) |
-| `APP_URL` | ja | Basis-URL, lokal `http://localhost:3000` |
-| `SESSION_SECRET` | in Produktion | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `DATABASE_PATH` | nein | Standard: `./data/app.db` |
 
 Ohne `ANTHROPIC_API_KEY` funktionieren alle lokal berechneten Kennzahlen; nur Analyse,
 Plan und Chat sind deaktiviert und weisen darauf hin.
@@ -106,7 +111,7 @@ src/
       strava/sync/            Aktivitäten nachladen
       ai/analysis/ plan/ chat/
   lib/
-    db.ts                     SQLite-Verbindung und Migrationen
+    db.ts                     Postgres-Pool, Abfragehelfer und Schema
     session.ts                HMAC-signiertes Session-Cookie
     strava.ts                 OAuth, Token-Refresh, Sync
     metrics.ts                Belastung, CTL/ATL/TSB, Wochen, Lagebild
@@ -117,11 +122,32 @@ src/
 ```
 
 **Technik:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS 4,
-better-sqlite3, `@anthropic-ai/sdk`, Zod.
+Postgres über `pg`, `@anthropic-ai/sdk`, Zod.
 
 Die Diagrammfarben (Blau / Orange / Grün) sind gegen die dunkle Diagrammfläche auf
 Helligkeitsband, Sättigung, Kontrast und Unterscheidbarkeit bei Farbsehschwäche
 geprüft; der Wochenumfang lässt sich zusätzlich als Tabelle anzeigen.
+
+## Online stellen
+
+Pacer läuft auf jeder Plattform, die Next.js ausführt. Der übliche Weg:
+
+1. **Datenbank anlegen** — bei [Neon](https://neon.tech) ein Projekt erstellen und die
+   Verbindungszeichenkette kopieren (die mit `?sslmode=require`).
+2. **Bei [Vercel](https://vercel.com) einloggen** und dieses GitHub-Repository importieren.
+3. **Umgebungsvariablen setzen** (Settings → Environment Variables):
+   `DATABASE_URL`, `SESSION_SECRET`, `APP_URL` (die Vercel-Adresse), dazu
+   `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET` und `ANTHROPIC_API_KEY`.
+4. **Strava anpassen** — in den Strava-API-Einstellungen die „Authorization Callback
+   Domain" auf die Vercel-Domain umstellen (ohne `https://`).
+5. Deployen. Die Tabellen legt Pacer beim ersten Aufruf selbst an.
+
+Zwei Grenzen der kostenlosen Vercel-Stufe:
+
+- **Zeitlimit 60 Sekunden.** Analyse und Chat passen bequem hinein, ein Trainingsplan
+  über viele Wochen nicht immer. Der Wert steht als `maxDuration` in
+  `src/app/api/ai/plan/route.ts` und lässt sich auf einem bezahlten Plan auf 300 erhöhen.
+- **Nur für private Projekte.** Sobald Geld fließt, verlangt Vercel den bezahlten Plan.
 
 ## Befehle
 

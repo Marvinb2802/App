@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { PlanBuilder } from "@/components/PlanBuilder";
 import { isAiConfigured } from "@/lib/ai";
 import { PlanSchema, type TrainingPlan } from "@/lib/ai-schemas";
-import { getDb } from "@/lib/db";
+import { queryOne } from "@/lib/db";
 import { getCurrentAthlete } from "@/lib/session";
 import { loadSnapshot } from "@/lib/snapshot";
 
@@ -21,11 +21,12 @@ export default async function PlanPage() {
   const athlete = await getCurrentAthlete();
   if (!athlete) redirect("/");
 
-  const snapshot = loadSnapshot(athlete);
+  const snapshot = await loadSnapshot(athlete);
 
-  const row = getDb()
-    .prepare("SELECT payload FROM plans WHERE athlete_id = ? ORDER BY id DESC LIMIT 1")
-    .get(athlete.id) as { payload: string } | undefined;
+  const row = await queryOne<{ payload: string }>(
+    "SELECT payload FROM plans WHERE athlete_id = $1 ORDER BY id DESC LIMIT 1",
+    [athlete.id],
+  );
 
   let initial: TrainingPlan | null = null;
   if (row) {

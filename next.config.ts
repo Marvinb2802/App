@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // better-sqlite3 is a native module and must not be bundled by webpack/turbopack.
-  serverExternalPackages: ["better-sqlite3"],
+  // Der Postgres-Treiber wird zur Laufzeit geladen, nicht mitgebuendelt.
+  serverExternalPackages: ["pg"],
 };
 
 export default nextConfig;

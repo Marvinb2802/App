@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AiNotConfiguredError } from "@/lib/ai";
+import { DatabaseNotConfiguredError } from "@/lib/db";
 import { UnauthorizedError } from "@/lib/session";
 import { StravaApiError, StravaNotConfiguredError } from "@/lib/strava";
 import Anthropic from "@anthropic-ai/sdk";
@@ -9,7 +10,11 @@ export function errorResponse(error: unknown): NextResponse {
   if (error instanceof UnauthorizedError) {
     return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
   }
-  if (error instanceof AiNotConfiguredError || error instanceof StravaNotConfiguredError) {
+  if (
+    error instanceof AiNotConfiguredError ||
+    error instanceof StravaNotConfiguredError ||
+    error instanceof DatabaseNotConfiguredError
+  ) {
     return NextResponse.json({ error: error.message }, { status: 503 });
   }
   if (error instanceof StravaApiError) {

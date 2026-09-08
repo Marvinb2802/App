@@ -1,126 +1,246 @@
-import Database from "better-sqlite3";
-import fs from "node:fs";
-import path from "node:path";
+import pg from "pg";
 
 /**
- * Eine einzige SQLite-Verbindung fuer den gesamten Serverprozess.
- * Im Next.js-Dev-Modus wird das Modul bei jedem Hot-Reload neu ausgewertet,
- * darum haengt die Verbindung am globalThis-Objekt.
+ * Postgres-Anbindung. Ein Pool je Serverprozess; im Dev-Modus haengt er am
+ * globalThis, weil Next.js das Modul bei jedem Hot-Reload neu auswertet.
  */
-const globalForDb = globalThis as unknown as { __db?: Database.Database };
 
-function createConnection(): Database.Database {
-  const file = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "app.db");
-  fs.mkdirSync(path.dirname(file), { recursive: true });
+// BIGINT kommt sonst als Zeichenkette zurueck. Strava-IDs und COUNT(*) sollen
+// Zahlen sein - beide liegen weit unter Number.MAX_SAFE_INTEGER.
+pg.types.setTypeParser(pg.types.builtins.INT8, (value) => Number.parseInt(value, 10));
 
-  const db = new Database(file);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  migrate(db);
-  return db;
+const globalForDb = globalThis as unknown as {
+  __pool?: pg.Pool;
+  __migrated?: Promise<void>;
+};
+
+export class DatabaseNotConfiguredError extends Error {
+  constructor() {
+    super("DATABASE_URL fehlt. Trage die Verbindung zu deiner Postgres-Datenbank in .env.local ein.");
+    this.name = "DatabaseNotConfiguredError";
+  }
 }
 
-function migrate(db: Database.Database): void {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS athletes (
-      id             INTEGER PRIMARY KEY,
-      firstname      TEXT,
-      lastname       TEXT,
-      profile        TEXT,
-      city           TEXT,
-      country        TEXT,
-      sex            TEXT,
-      weight_kg      REAL,
-      ftp            INTEGER,
-      max_hr         INTEGER,
-      rest_hr        INTEGER,
-      threshold_hr   INTEGER,
-      threshold_pace REAL,      -- Schwellentempo in m/s
-      goal           TEXT,      -- Freitext-Saisonziel
-      created_at     TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS tokens (
-      athlete_id    INTEGER PRIMARY KEY REFERENCES athletes(id) ON DELETE CASCADE,
-      access_token  TEXT NOT NULL,
-      refresh_token TEXT NOT NULL,
-      expires_at    INTEGER NOT NULL,   -- Unix-Sekunden
-      scope         TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS activities (
-      id                     INTEGER PRIMARY KEY,
-      athlete_id             INTEGER NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-      name                   TEXT,
-      sport_type             TEXT,
-      start_date             TEXT NOT NULL,   -- ISO-8601 UTC
-      start_date_local       TEXT,
-      distance               REAL,            -- Meter
-      moving_time            INTEGER,         -- Sekunden
-      elapsed_time           INTEGER,
-      total_elevation_gain   REAL,            -- Meter
-      average_speed          REAL,            -- m/s
-      max_speed              REAL,
-      average_heartrate      REAL,
-      max_heartrate          REAL,
-      average_watts          REAL,
-      weighted_average_watts REAL,
-      kilojoules             REAL,
-      average_cadence        REAL,
-      suffer_score           REAL,
-      has_heartrate          INTEGER NOT NULL DEFAULT 0,
-      trainer                INTEGER NOT NULL DEFAULT 0,
-      synced_at              TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_activities_athlete_date
-      ON activities(athlete_id, start_date DESC);
-
-    CREATE TABLE IF NOT EXISTS sync_state (
-      athlete_id     INTEGER PRIMARY KEY REFERENCES athletes(id) ON DELETE CASCADE,
-      last_synced_at TEXT,
-      last_error     TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS ai_reports (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      athlete_id INTEGER NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-      kind       TEXT NOT NULL,        -- 'analysis'
-      payload    TEXT NOT NULL,        -- JSON
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_reports_athlete
-      ON ai_reports(athlete_id, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS plans (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      athlete_id INTEGER NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-      goal       TEXT NOT NULL,
-      target_date TEXT,
-      weeks      INTEGER NOT NULL,
-      payload    TEXT NOT NULL,        -- JSON
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_plans_athlete
-      ON plans(athlete_id, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS chat_messages (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      athlete_id INTEGER NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-      role       TEXT NOT NULL,        -- 'user' | 'assistant'
-      content    TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_chat_athlete
-      ON chat_messages(athlete_id, id);
-  `);
+export function isDatabaseConfigured(): boolean {
+  return Boolean(process.env.DATABASE_URL);
 }
 
-export function getDb(): Database.Database {
-  if (!globalForDb.__db) globalForDb.__db = createConnection();
-  return globalForDb.__db;
+function getPool(): pg.Pool {
+  if (globalForDb.__pool) return globalForDb.__pool;
+
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new DatabaseNotConfiguredError();
+
+  globalForDb.__pool = new pg.Pool({
+    connectionString,
+    // Gehostete Datenbanken (Neon, Supabase) verlangen TLS, ein lokaler
+    // Postgres kann es nicht. Die Verbindungszeichenkette entscheidet.
+    ssl: /\bsslmode=(require|verify-full)\b/.test(connectionString)
+      ? { rejectUnauthorized: false }
+      : undefined,
+    max: 5,
+  });
+
+  return globalForDb.__pool;
 }
+
+/**
+ * Uebersetzt benannte Platzhalter (@name) in die von Postgres erwartete
+ * Positionsform ($1, $2, ...). Das haelt die langen INSERT-Anweisungen lesbar.
+ */
+function bindNamed(text: string, params: Record<string, unknown>): [string, unknown[]] {
+  const values: unknown[] = [];
+  const positions = new Map<string, number>();
+
+  const translated = text.replace(/@([a-zA-Z_][a-zA-Z0-9_]*)/g, (_match, name: string) => {
+    const known = positions.get(name);
+    if (known !== undefined) return `$${known}`;
+
+    if (!(name in params)) {
+      throw new Error(`Platzhalter @${name} wurde nicht mit einem Wert belegt.`);
+    }
+    values.push(params[name]);
+    const position = values.length;
+    positions.set(name, position);
+    return `$${position}`;
+  });
+
+  return [translated, values];
+}
+
+type Params = unknown[] | Record<string, unknown>;
+
+function prepare(text: string, params?: Params): [string, unknown[]] {
+  if (params === undefined) return [text, []];
+  if (Array.isArray(params)) return [text, params];
+  return bindNamed(text, params);
+}
+
+/** Alle Zeilen einer Abfrage. */
+export async function queryAll<T>(text: string, params?: Params): Promise<T[]> {
+  await ensureMigrated();
+  const [sql, values] = prepare(text, params);
+  const result = await getPool().query(sql, values);
+  return result.rows as T[];
+}
+
+/** Die erste Zeile einer Abfrage, oder null. */
+export async function queryOne<T>(text: string, params?: Params): Promise<T | null> {
+  const rows = await queryAll<T>(text, params);
+  return rows[0] ?? null;
+}
+
+/** Schreibender Zugriff ohne Ergebnis. */
+export async function execute(text: string, params?: Params): Promise<void> {
+  await queryAll(text, params);
+}
+
+/**
+ * Fuehrt mehrere Anweisungen auf einer Verbindung als eine Transaktion aus.
+ * Bei einem Fehler wird alles zurueckgerollt.
+ */
+export async function transaction<T>(
+  run: (client: pg.PoolClient) => Promise<T>,
+): Promise<T> {
+  await ensureMigrated();
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await run(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/** Wie `prepare`, aber fuer Anweisungen innerhalb einer Transaktion. */
+export function bind(text: string, params?: Params): [string, unknown[]] {
+  return prepare(text, params);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Schema                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Zeitstempel als Text, damit die Werte ueberall gleich aussehen. */
+const NOW = "to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')";
+
+const SCHEMA = `
+  CREATE TABLE IF NOT EXISTS athletes (
+    id             BIGINT PRIMARY KEY,
+    firstname      TEXT,
+    lastname       TEXT,
+    profile        TEXT,
+    city           TEXT,
+    country        TEXT,
+    sex            TEXT,
+    weight_kg      DOUBLE PRECISION,
+    ftp            INTEGER,
+    max_hr         INTEGER,
+    rest_hr        INTEGER,
+    threshold_hr   INTEGER,
+    threshold_pace DOUBLE PRECISION,
+    goal           TEXT,
+    created_at     TEXT NOT NULL DEFAULT ${NOW},
+    updated_at     TEXT NOT NULL DEFAULT ${NOW}
+  );
+
+  CREATE TABLE IF NOT EXISTS tokens (
+    athlete_id    BIGINT PRIMARY KEY REFERENCES athletes(id) ON DELETE CASCADE,
+    access_token  TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    expires_at    BIGINT NOT NULL,
+    scope         TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS activities (
+    id                     BIGINT PRIMARY KEY,
+    athlete_id             BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+    name                   TEXT,
+    sport_type             TEXT,
+    start_date             TEXT NOT NULL,
+    start_date_local       TEXT,
+    distance               DOUBLE PRECISION,
+    moving_time            INTEGER,
+    elapsed_time           INTEGER,
+    total_elevation_gain   DOUBLE PRECISION,
+    average_speed          DOUBLE PRECISION,
+    max_speed              DOUBLE PRECISION,
+    average_heartrate      DOUBLE PRECISION,
+    max_heartrate          DOUBLE PRECISION,
+    average_watts          DOUBLE PRECISION,
+    weighted_average_watts DOUBLE PRECISION,
+    kilojoules             DOUBLE PRECISION,
+    average_cadence        DOUBLE PRECISION,
+    suffer_score           DOUBLE PRECISION,
+    has_heartrate          INTEGER NOT NULL DEFAULT 0,
+    trainer                INTEGER NOT NULL DEFAULT 0,
+    synced_at              TEXT NOT NULL DEFAULT ${NOW}
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_activities_athlete_date
+    ON activities(athlete_id, start_date DESC);
+
+  CREATE TABLE IF NOT EXISTS sync_state (
+    athlete_id     BIGINT PRIMARY KEY REFERENCES athletes(id) ON DELETE CASCADE,
+    last_synced_at TEXT,
+    last_error     TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS ai_reports (
+    id         BIGSERIAL PRIMARY KEY,
+    athlete_id BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL,
+    payload    TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT ${NOW}
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_reports_athlete
+    ON ai_reports(athlete_id, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS plans (
+    id          BIGSERIAL PRIMARY KEY,
+    athlete_id  BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+    goal        TEXT NOT NULL,
+    target_date TEXT,
+    weeks       INTEGER NOT NULL,
+    payload     TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT ${NOW}
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_plans_athlete
+    ON plans(athlete_id, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id         BIGSERIAL PRIMARY KEY,
+    athlete_id BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+    role       TEXT NOT NULL,
+    content    TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT ${NOW}
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_chat_athlete
+    ON chat_messages(athlete_id, id);
+`;
+
+/** Legt das Schema beim ersten Zugriff an. Laeuft genau einmal je Prozess. */
+function ensureMigrated(): Promise<void> {
+  if (!globalForDb.__migrated) {
+    globalForDb.__migrated = getPool()
+      .query(SCHEMA)
+      .then(() => undefined)
+      .catch((error: unknown) => {
+        // Ein Fehlschlag darf sich nicht als "erledigt" merken.
+        globalForDb.__migrated = undefined;
+        throw error;
+      });
+  }
+  return globalForDb.__migrated;
+}
+
+/** Der Zeitstempel-Ausdruck, damit Aufrufer ihn in eigenen Anweisungen nutzen. */
+export const NOW_SQL = NOW;

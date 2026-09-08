@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import { getDb } from "@/lib/db";
+import { queryOne } from "@/lib/db";
 import type { Athlete } from "@/lib/types";
 
 const COOKIE_NAME = "pacer_session";
@@ -77,10 +77,7 @@ export async function getCurrentAthlete(): Promise<Athlete | null> {
   const id = await getAthleteId();
   if (id === null) return null;
 
-  const row = getDb()
-    .prepare("SELECT * FROM athletes WHERE id = ?")
-    .get(id) as Athlete | undefined;
-  return row ?? null;
+  return queryOne<Athlete>("SELECT * FROM athletes WHERE id = $1", [id]);
 }
 
 /** Wie getCurrentAthlete, wirft aber statt null zurueckzugeben. Fuer API-Routen. */

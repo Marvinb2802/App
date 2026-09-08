@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { errorResponse } from "@/lib/api";
-import { getDb } from "@/lib/db";
+import { NOW_SQL, execute } from "@/lib/db";
 import { requireAthlete } from "@/lib/session";
 
 const SettingsSchema = z.object({
@@ -21,16 +21,15 @@ export async function POST(request: NextRequest) {
     const athlete = await requireAthlete();
     const settings = SettingsSchema.parse(await request.json());
 
-    getDb()
-      .prepare(
-        `UPDATE athletes
+    await execute(
+      `UPDATE athletes
             SET weight_kg = @weight_kg, max_hr = @max_hr, rest_hr = @rest_hr,
                 threshold_hr = @threshold_hr, ftp = @ftp,
                 threshold_pace = @threshold_pace, goal = @goal,
-                updated_at = datetime('now')
-          WHERE id = @id`,
-      )
-      .run({ ...settings, id: athlete.id });
+                updated_at = ${NOW_SQL}
+        WHERE id = @id`,
+      { ...settings, id: athlete.id },
+    );
 
     return NextResponse.json({ ok: true });
   } catch (error) {

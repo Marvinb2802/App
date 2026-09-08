@@ -5,6 +5,7 @@ import { SyncButton } from "@/components/SyncButton";
 import { WeeklyVolume } from "@/components/WeeklyVolume";
 import { Badge, Card, EmptyState, StatTile } from "@/components/ui";
 import { isAiConfigured } from "@/lib/ai";
+import { isDatabaseConfigured } from "@/lib/db";
 import { isDemoAthlete } from "@/lib/demo";
 import { getCurrentAthlete } from "@/lib/session";
 import { loadDashboard } from "@/lib/snapshot";
@@ -21,6 +22,8 @@ const ERROR_TEXTS: Record<string, string> = {
   fehlende_berechtigung:
     "Die Berechtigung „Alle Aktivitäten“ wurde nicht erteilt. Ohne sie sieht die App deine Daten nicht.",
   kein_athlet: "Strava hat kein Athletenprofil geliefert.",
+  token_tausch_fehlgeschlagen:
+    "Der Austausch mit Strava ist fehlgeschlagen. Prüfe Client-ID und Client-Secret.",
 };
 
 export default async function Dashboard({
@@ -28,14 +31,17 @@ export default async function Dashboard({
 }: {
   searchParams: Promise<{ error?: string; warnung?: string }>;
 }) {
-  const athlete = await getCurrentAthlete();
   const params = await searchParams;
+
+  if (!isDatabaseConfigured()) return <DatabaseSetup />;
+
+  const athlete = await getCurrentAthlete();
 
   if (!athlete) {
     return <Landing error={params.error} />;
   }
 
-  const { snapshot, series } = loadDashboard(athlete);
+  const { snapshot, series } = await loadDashboard(athlete);
   const demo = isDemoAthlete(athlete.id);
 
   if (snapshot.activityCount === 0) {
@@ -48,7 +54,7 @@ export default async function Dashboard({
         <EmptyState title="Keine Aktivitäten gefunden">
           Synchronisiere deine Strava-Aktivitäten, damit die Auswertung starten kann.
           <div className="mt-4 flex justify-center">
-            <SyncButton lastSyncedAt={lastSyncedAt(athlete.id)} />
+            <SyncButton lastSyncedAt={await lastSyncedAt(athlete.id)} />
           </div>
         </EmptyState>
       </div>
@@ -65,7 +71,7 @@ export default async function Dashboard({
           title={`Hallo ${athlete.firstname ?? "Athlet"}`}
           subtitle={`${snapshot.activityCount} Aktivitäten ausgewertet · Stand ${snapshot.generatedAt.slice(0, 10)}`}
         />
-        {!demo && <SyncButton lastSyncedAt={lastSyncedAt(athlete.id)} />}
+        {!demo && <SyncButton lastSyncedAt={await lastSyncedAt(athlete.id)} />}
       </div>
 
       {demo && (
@@ -304,6 +310,38 @@ function Landing({ error }: { error?: string }) {
           bekommst Antworten, die deine letzten Wochen kennen.
         </Feature>
       </div>
+    </div>
+  );
+}
+
+/** Wird gezeigt, solange keine Datenbank hinterlegt ist. */
+function DatabaseSetup() {
+  return (
+    <div className="mx-auto max-w-2xl py-16">
+      <h1 className="text-2xl font-semibold tracking-tight">Noch ein Schritt: die Datenbank</h1>
+
+      <p className="mt-4 leading-relaxed text-ink-300">
+        Pacer speichert deine Aktivitäten in einer Postgres-Datenbank. Eine kostenlose
+        bekommst du in zwei Minuten bei{" "}
+        <a href="https://neon.tech" className="text-brand-light hover:underline">Neon</a> oder{" "}
+        <a href="https://supabase.com" className="text-brand-light hover:underline">Supabase</a>.
+      </p>
+
+      <ol className="mt-6 space-y-3 text-ink-300">
+        <li>1. Dort ein Projekt anlegen und die Verbindungszeichenkette kopieren.</li>
+        <li>
+          2. Sie in die Datei{" "}
+          <code className="rounded bg-ink-900 px-1.5 py-0.5 text-ink-100">.env.local</code> schreiben:
+        </li>
+      </ol>
+
+      <pre className="mt-3 overflow-x-auto rounded-xl border border-ink-800 bg-ink-900 px-4 py-3 text-sm text-ink-100">
+        DATABASE_URL=postgresql://benutzer:passwort@host/datenbank?sslmode=require
+      </pre>
+
+      <p className="mt-4 text-sm text-ink-500">
+        3. Server neu starten. Die Tabellen legt Pacer beim ersten Aufruf selbst an.
+      </p>
     </div>
   );
 }

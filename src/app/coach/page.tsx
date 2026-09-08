@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { ChatPanel } from "@/components/ChatPanel";
 import { isAiConfigured } from "@/lib/ai";
-import { getDb } from "@/lib/db";
+import { queryAll } from "@/lib/db";
 import { getCurrentAthlete } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -10,12 +10,11 @@ export default async function CoachPage() {
   const athlete = await getCurrentAthlete();
   if (!athlete) redirect("/");
 
-  const history = getDb()
-    .prepare(
-      `SELECT role, content FROM chat_messages
-        WHERE athlete_id = ? ORDER BY id ASC LIMIT 60`,
-    )
-    .all(athlete.id) as { role: "user" | "assistant"; content: string }[];
+  const history = await queryAll<{ role: "user" | "assistant"; content: string }>(
+    `SELECT role, content FROM chat_messages
+      WHERE athlete_id = $1 ORDER BY id ASC LIMIT 60`,
+    [athlete.id],
+  );
 
   return (
     <div className="space-y-6">

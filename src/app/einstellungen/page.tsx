@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   const athlete = await getCurrentAthlete();
   if (!athlete) redirect("/");
 
-  const snapshot = loadSnapshot(athlete);
+  const snapshot = await loadSnapshot(athlete);
 
   return (
     <div className="space-y-6">

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AnalysisPanel } from "@/components/AnalysisPanel";
 import { isAiConfigured } from "@/lib/ai";
 import { AnalysisSchema, type Analysis } from "@/lib/ai-schemas";
-import { getDb } from "@/lib/db";
+import { queryOne } from "@/lib/db";
 import { getCurrentAthlete } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -11,13 +11,12 @@ export default async function AnalysePage() {
   const athlete = await getCurrentAthlete();
   if (!athlete) redirect("/");
 
-  const row = getDb()
-    .prepare(
-      `SELECT payload, created_at FROM ai_reports
-        WHERE athlete_id = ? AND kind = 'analysis'
-        ORDER BY id DESC LIMIT 1`,
-    )
-    .get(athlete.id) as { payload: string; created_at: string } | undefined;
+  const row = await queryOne<{ payload: string; created_at: string }>(
+    `SELECT payload, created_at FROM ai_reports
+      WHERE athlete_id = $1 AND kind = 'analysis'
+      ORDER BY id DESC LIMIT 1`,
+    [athlete.id],
+  );
 
   // Ein altes Ergebnis mit inzwischen geaendertem Schema darf die Seite nicht kippen.
   let initial: Analysis | null = null;

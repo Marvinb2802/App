@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { isDatabaseConfigured } from "@/lib/db";
 import { getCurrentAthlete } from "@/lib/session";
 import { LogoutButton } from "@/components/LogoutButton";
 import "./globals.css";
@@ -19,7 +20,8 @@ const NAV = [
 ];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const athlete = await getCurrentAthlete();
+  // Ohne Datenbank zeigt die Startseite die Einrichtung - die Kopfzeile bleibt leer.
+  const athlete = isDatabaseConfigured() ? await getCurrentAthlete() : null;
   const name = [athlete?.firstname, athlete?.lastname].filter(Boolean).join(" ");
 
   return (

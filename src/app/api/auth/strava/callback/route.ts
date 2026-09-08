@@ -35,11 +35,16 @@ export async function GET(request: NextRequest) {
   const scope = params.get("scope") ?? "";
   if (!scope.includes("activity:read")) return back("/?error=fehlende_berechtigung");
 
-  const tokens = await exchangeCodeForTokens(code);
+  let tokens;
+  try {
+    tokens = await exchangeCodeForTokens(code);
+  } catch {
+    return back("/?error=token_tausch_fehlgeschlagen");
+  }
   if (!tokens.athlete) return back("/?error=kein_athlet");
 
-  upsertAthlete(tokens.athlete);
-  saveTokens(tokens.athlete.id, tokens);
+  await upsertAthlete(tokens.athlete);
+  await saveTokens(tokens.athlete.id, tokens);
   await setSession(tokens.athlete.id);
 
   try {

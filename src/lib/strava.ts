@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { NOW_SQL, bind, execute, queryAll, queryOne, transaction } from "@/lib/db";
 import type { Activity, StoredTokens } from "@/lib/types";
 
 const OAUTH_BASE = "https://www.strava.com/oauth";
@@ -107,10 +107,10 @@ export function exchangeCodeForTokens(code: string): Promise<TokenResponse> {
 
 /** Liefert ein gueltiges Access-Token und erneuert es bei Bedarf. */
 export async function getFreshAccessToken(athleteId: number): Promise<string> {
-  const db = getDb();
-  const tokens = db
-    .prepare("SELECT * FROM tokens WHERE athlete_id = ?")
-    .get(athleteId) as StoredTokens | undefined;
+  const tokens = await queryOne<StoredTokens>(
+    "SELECT * FROM tokens WHERE athlete_id = $1",
+    [athleteId],
+  );
 
   if (!tokens) throw new StravaApiError("Keine Strava-Verbindung fuer diesen Athleten.", 401);
 
@@ -123,9 +123,10 @@ export async function getFreshAccessToken(athleteId: number): Promise<string> {
     refresh_token: tokens.refresh_token,
   });
 
-  db.prepare(
-    `UPDATE tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE athlete_id = ?`,
-  ).run(refreshed.access_token, refreshed.refresh_token, refreshed.expires_at, athleteId);
+  await execute(
+    `UPDATE tokens SET access_token = $1, refresh_token = $2, expires_at = $3 WHERE athlete_id = $4`,
+    [refreshed.access_token, refreshed.refresh_token, refreshed.expires_at, athleteId],
+  );
 
   return refreshed.access_token;
 }
@@ -149,12 +150,11 @@ async function apiGet<T>(athleteId: number, path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function saveTokens(
+export async function saveTokens(
   athleteId: number,
   tokens: { access_token: string; refresh_token: string; expires_at: number; scope?: string },
-): void {
-  getDb()
-    .prepare(
+): Promise<void> {
+  await execute(
       `INSERT INTO tokens (athlete_id, access_token, refresh_token, expires_at, scope)
        VALUES (@athlete_id, @access_token, @refresh_token, @expires_at, @scope)
        ON CONFLICT(athlete_id) DO UPDATE SET
@@ -162,19 +162,18 @@ export function saveTokens(
          refresh_token = excluded.refresh_token,
          expires_at    = excluded.expires_at,
          scope         = excluded.scope`,
-    )
-    .run({
+    {
       athlete_id: athleteId,
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       expires_at: tokens.expires_at,
       scope: tokens.scope ?? null,
-    });
+    },
+  );
 }
 
-export function upsertAthlete(athlete: StravaAthlete): void {
-  getDb()
-    .prepare(
+export async function upsertAthlete(athlete: StravaAthlete): Promise<void> {
+  await execute(
       `INSERT INTO athletes (id, firstname, lastname, profile, city, country, sex, weight_kg, ftp)
        VALUES (@id, @firstname, @lastname, @profile, @city, @country, @sex, @weight_kg, @ftp)
        ON CONFLICT(id) DO UPDATE SET
@@ -186,9 +185,8 @@ export function upsertAthlete(athlete: StravaAthlete): void {
          sex        = excluded.sex,
          weight_kg  = COALESCE(excluded.weight_kg, athletes.weight_kg),
          ftp        = COALESCE(excluded.ftp, athletes.ftp),
-         updated_at = datetime('now')`,
-    )
-    .run({
+         updated_at = ${NOW_SQL}`,
+    {
       id: athlete.id,
       firstname: athlete.firstname ?? null,
       lastname: athlete.lastname ?? null,
@@ -198,7 +196,8 @@ export function upsertAthlete(athlete: StravaAthlete): void {
       sex: athlete.sex ?? null,
       weight_kg: athlete.weight ?? null,
       ftp: athlete.ftp ?? null,
-    });
+    },
+  );
 }
 
 export type SummaryActivity = {
@@ -235,7 +234,7 @@ const insertActivity = `
     @id, @athlete_id, @name, @sport_type, @start_date, @start_date_local, @distance,
     @moving_time, @elapsed_time, @total_elevation_gain, @average_speed, @max_speed,
     @average_heartrate, @max_heartrate, @average_watts, @weighted_average_watts,
-    @kilojoules, @average_cadence, @suffer_score, @has_heartrate, @trainer, datetime('now')
+    @kilojoules, @average_cadence, @suffer_score, @has_heartrate, @trainer, ${NOW_SQL}
   )
   ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
@@ -255,16 +254,18 @@ const insertActivity = `
     suffer_score = excluded.suffer_score,
     has_heartrate = excluded.has_heartrate,
     trainer = excluded.trainer,
-    synced_at = datetime('now')
+    synced_at = ${NOW_SQL}
 `;
 
-export function storeActivities(athleteId: number, activities: SummaryActivity[]): number {
-  const db = getDb();
-  const statement = db.prepare(insertActivity);
+export async function storeActivities(
+  athleteId: number,
+  activities: SummaryActivity[],
+): Promise<number> {
+  if (activities.length === 0) return 0;
 
-  const run = db.transaction((items: SummaryActivity[]) => {
-    for (const item of items) {
-      statement.run({
+  await transaction(async (client) => {
+    for (const item of activities) {
+      const [sql, values] = bind(insertActivity, {
         id: item.id,
         athlete_id: athleteId,
         name: item.name ?? null,
@@ -287,10 +288,10 @@ export function storeActivities(athleteId: number, activities: SummaryActivity[]
         has_heartrate: item.has_heartrate ? 1 : 0,
         trainer: item.trainer ? 1 : 0,
       });
+      await client.query(sql, values);
     }
   });
 
-  run(activities);
   return activities.length;
 }
 
@@ -313,18 +314,17 @@ export async function syncActivities(
       `/athlete/activities?after=${after}&per_page=200&page=${page}`,
     );
     if (batch.length === 0) break;
-    imported += storeActivities(athleteId, batch);
+    imported += await storeActivities(athleteId, batch);
     if (batch.length < 200) break;
   }
 
-  getDb()
-    .prepare(
-      `INSERT INTO sync_state (athlete_id, last_synced_at, last_error)
-       VALUES (?, datetime('now'), NULL)
-       ON CONFLICT(athlete_id) DO UPDATE SET
-         last_synced_at = datetime('now'), last_error = NULL`,
-    )
-    .run(athleteId);
+  await execute(
+    `INSERT INTO sync_state (athlete_id, last_synced_at, last_error)
+     VALUES ($1, ${NOW_SQL}, NULL)
+     ON CONFLICT(athlete_id) DO UPDATE SET
+       last_synced_at = ${NOW_SQL}, last_error = NULL`,
+    [athleteId],
+  );
 
   return { imported };
 }
@@ -353,28 +353,31 @@ export async function syncAthleteZones(athleteId: number): Promise<void> {
   // Untergrenze der vorletzten Zone ist eine brauchbare Naeherung der Schwelle.
   const thresholdHr = hrZones[hrZones.length - 2]?.min ?? hrZones[hrZones.length - 1]?.min;
 
-  getDb()
-    .prepare(
-      `UPDATE athletes
-          SET max_hr = COALESCE(?, max_hr),
-              threshold_hr = COALESCE(?, threshold_hr),
-              updated_at = datetime('now')
-        WHERE id = ?`,
-    )
-    .run(maxHr && maxHr > 0 ? maxHr : null, thresholdHr && thresholdHr > 0 ? thresholdHr : null, athleteId);
+  await execute(
+    `UPDATE athletes
+        SET max_hr = COALESCE($1, max_hr),
+            threshold_hr = COALESCE($2, threshold_hr),
+            updated_at = ${NOW_SQL}
+      WHERE id = $3`,
+    [
+      maxHr && maxHr > 0 ? maxHr : null,
+      thresholdHr && thresholdHr > 0 ? thresholdHr : null,
+      athleteId,
+    ],
+  );
 }
 
-export function listActivities(athleteId: number, limit = 500): Activity[] {
-  return getDb()
-    .prepare(
-      "SELECT * FROM activities WHERE athlete_id = ? ORDER BY start_date DESC LIMIT ?",
-    )
-    .all(athleteId, limit) as Activity[];
+export function listActivities(athleteId: number, limit = 500): Promise<Activity[]> {
+  return queryAll<Activity>(
+    "SELECT * FROM activities WHERE athlete_id = $1 ORDER BY start_date DESC LIMIT $2",
+    [athleteId, limit],
+  );
 }
 
-export function lastSyncedAt(athleteId: number): string | null {
-  const row = getDb()
-    .prepare("SELECT last_synced_at FROM sync_state WHERE athlete_id = ?")
-    .get(athleteId) as { last_synced_at: string | null } | undefined;
+export async function lastSyncedAt(athleteId: number): Promise<string | null> {
+  const row = await queryOne<{ last_synced_at: string | null }>(
+    "SELECT last_synced_at FROM sync_state WHERE athlete_id = $1",
+    [athleteId],
+  );
   return row?.last_synced_at ?? null;
 }

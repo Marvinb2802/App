@@ -3,11 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { chatSystemPrompt, streamChat } from "@/lib/ai";
 import { errorResponse } from "@/lib/api";
-import { getDb } from "@/lib/db";
+import { execute, queryAll } from "@/lib/db";
 import { requireAthlete } from "@/lib/session";
 import { loadSnapshot } from "@/lib/snapshot";
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 const RequestSchema = z.object({ message: z.string().min(1).max(4000) });
 
@@ -16,27 +16,25 @@ export async function POST(request: NextRequest) {
   try {
     const athlete = await requireAthlete();
     const { message } = RequestSchema.parse(await request.json());
-    const db = getDb();
 
     // Die letzten Runden als Gespraechsverlauf, aelteste zuerst.
-    const history = db
-      .prepare(
-        `SELECT role, content FROM chat_messages
-          WHERE athlete_id = ? ORDER BY id DESC LIMIT 20`,
-      )
-      .all(athlete.id) as { role: "user" | "assistant"; content: string }[];
+    const history = await queryAll<{ role: "user" | "assistant"; content: string }>(
+      `SELECT role, content FROM chat_messages
+        WHERE athlete_id = $1 ORDER BY id DESC LIMIT 20`,
+      [athlete.id],
+    );
 
     const messages: Anthropic.MessageParam[] = history
       .reverse()
       .map((row) => ({ role: row.role, content: row.content }));
     messages.push({ role: "user", content: message });
 
-    db.prepare("INSERT INTO chat_messages (athlete_id, role, content) VALUES (?, 'user', ?)").run(
-      athlete.id,
-      message,
+    await execute(
+      "INSERT INTO chat_messages (athlete_id, role, content) VALUES ($1, 'user', $2)",
+      [athlete.id, message],
     );
 
-    const snapshot = loadSnapshot(athlete);
+    const snapshot = await loadSnapshot(athlete);
     const stream = streamChat(chatSystemPrompt(athlete, snapshot), messages);
 
     const body = new ReadableStream<Uint8Array>({
@@ -50,9 +48,10 @@ export async function POST(request: NextRequest) {
               controller.enqueue(encoder.encode(event.delta.text));
             }
           }
-          db.prepare(
-            "INSERT INTO chat_messages (athlete_id, role, content) VALUES (?, 'assistant', ?)",
-          ).run(athlete.id, answer);
+          await execute(
+            "INSERT INTO chat_messages (athlete_id, role, content) VALUES ($1, 'assistant', $2)",
+            [athlete.id, answer],
+          );
         } catch (streamError) {
           const text =
             streamError instanceof Error ? streamError.message : "Verbindung abgebrochen.";
@@ -82,7 +81,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE() {
   try {
     const athlete = await requireAthlete();
-    getDb().prepare("DELETE FROM chat_messages WHERE athlete_id = ?").run(athlete.id);
+    await execute("DELETE FROM chat_messages WHERE athlete_id = $1", [athlete.id]);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return errorResponse(error);
