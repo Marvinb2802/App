@@ -9,7 +9,7 @@ export async function GET() {
     // CSRF-Schutz: der state-Wert muss im Callback unveraendert zurueckkommen.
     const state = randomBytes(16).toString("hex");
     const store = await cookies();
-    store.set("sac_oauth_state", state, {
+    store.set("pacer_oauth_state", state, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",

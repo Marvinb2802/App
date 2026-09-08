@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 import type { Athlete } from "@/lib/types";
 
-const COOKIE_NAME = "sac_session";
+const COOKIE_NAME = "pacer_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 Tage
 
 let warnedAboutSecret = false;

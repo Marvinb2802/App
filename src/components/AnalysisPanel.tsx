@@ -50,7 +50,7 @@ export function AnalysisPanel({
           type="button"
           onClick={run}
           disabled={busy || disabled}
-          className="rounded-lg bg-strava px-5 py-2.5 font-medium text-white transition hover:bg-strava-dark disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-brand px-5 py-2.5 font-medium text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "Claude analysiert …" : analysis ? "Neu analysieren" : "Training analysieren"}
         </button>
@@ -127,7 +127,7 @@ export function AnalysisPanel({
           <Card title="Empfehlungen">
             <ul className="space-y-5">
               {analysis.recommendations.map((item) => (
-                <li key={item.title} className="border-l-2 border-strava/60 pl-4">
+                <li key={item.title} className="border-l-2 border-brand-light/50 pl-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium text-ink-100">{item.title}</p>
                     <Badge tone={PRIORITY_TONE[item.priority]}>Priorität {item.priority}</Badge>

@@ -13,7 +13,7 @@ const SESSION_TONE: Record<PlanSession["type"], string> = {
   Intervalle: "border-red-900/60 bg-red-950/30 text-red-200",
   Longrun: "border-emerald-900/60 bg-emerald-950/30 text-emerald-200",
   Kraft: "border-violet-900/60 bg-violet-950/30 text-violet-200",
-  Wettkampf: "border-strava/60 bg-strava/10 text-orange-200",
+  Wettkampf: "border-brand-light/50 bg-brand/15 text-orange-200",
   Test: "border-ink-700 bg-ink-900/60 text-ink-300",
   Sonstiges: "border-ink-700 bg-ink-900/60 text-ink-300",
 };
@@ -118,7 +118,7 @@ export function PlanBuilder({
               max={20}
               value={form.weeks}
               onChange={(e) => setForm({ ...form, weeks: Number(e.target.value) })}
-              className="w-full accent-[#fc4c02]"
+              className="w-full accent-[#3fc3dc]"
             />
           </Field>
 
@@ -129,7 +129,7 @@ export function PlanBuilder({
               max={12}
               value={form.sessionsPerWeek}
               onChange={(e) => setForm({ ...form, sessionsPerWeek: Number(e.target.value) })}
-              className="w-full accent-[#fc4c02]"
+              className="w-full accent-[#3fc3dc]"
             />
           </Field>
 
@@ -141,7 +141,7 @@ export function PlanBuilder({
               step={0.5}
               value={form.hoursPerWeek}
               onChange={(e) => setForm({ ...form, hoursPerWeek: Number(e.target.value) })}
-              className="w-full accent-[#fc4c02]"
+              className="w-full accent-[#3fc3dc]"
             />
           </Field>
 
@@ -159,7 +159,7 @@ export function PlanBuilder({
             <button
               type="submit"
               disabled={busy || disabled}
-              className="rounded-lg bg-strava px-5 py-2.5 font-medium text-white transition hover:bg-strava-dark disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-brand px-5 py-2.5 font-medium text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? "Claude schreibt den Plan …" : "Trainingsplan erstellen"}
             </button>
@@ -319,4 +319,4 @@ function Detail({ term, children }: { term: string; children: React.ReactNode })
 }
 
 const inputClass =
-  "w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-ink-100 outline-none transition focus:border-strava";
+  "w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-ink-100 outline-none transition focus:border-brand-light";

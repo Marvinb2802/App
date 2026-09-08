@@ -10,8 +10,12 @@
   --color-ink-300: #a8b0c0;
   --color-ink-100: #e6e9f0;
 
-  --color-strava: #fc4c02;
-  --color-strava-dark: #d63f02;
+  /* Markenfarben: tiefes Tuerkis. Der dunkle Ton traegt weisse Schrift
+     (5,8:1), der helle Ton steht als Linkfarbe auf dem dunklen Grund (9,4:1).
+     Beide sind vom Gruen der Form-Kurve deutlich abgesetzt. */
+  --color-brand: #0f6f85;
+  --color-brand-dark: #0b5a6d;
+  --color-brand-light: #3fc3dc;
 
   /* Serienfarben: Slots 1-3 der validierten Dark-Mode-Kategorialpalette.
      Geprueft gegen die Diagrammflaeche #151922 (Lightness-Band, Chroma,
@@ -29,7 +33,7 @@ html {
 
 body {
   background:
-    radial-gradient(1100px 600px at 80% -10%, rgba(252, 76, 2, 0.10), transparent 60%),
+    radial-gradient(1100px 600px at 80% -10%, rgba(63, 195, 220, 0.10), transparent 60%),
     radial-gradient(900px 500px at 0% 0%, rgba(78, 168, 222, 0.08), transparent 55%),
     var(--color-ink-950);
   color: var(--color-ink-100);

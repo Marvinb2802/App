@@ -139,7 +139,7 @@ export function SettingsForm({ athlete }: { athlete: Athlete }) {
           value={values.goal}
           onChange={(event) => setValues({ ...values, goal: event.target.value })}
           placeholder="z. B. Marathon in Berlin unter 3:15 h, Ende September"
-          className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-ink-100 outline-none transition focus:border-strava"
+          className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-ink-100 outline-none transition focus:border-brand-light"
         />
       </Card>
 
@@ -147,7 +147,7 @@ export function SettingsForm({ athlete }: { athlete: Athlete }) {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-strava px-5 py-2.5 font-medium text-white transition hover:bg-strava-dark disabled:opacity-50"
+          className="rounded-lg bg-brand px-5 py-2.5 font-medium text-white transition hover:bg-brand-dark disabled:opacity-50"
         >
           {busy ? "Speichert …" : "Speichern"}
         </button>
@@ -183,7 +183,7 @@ function Field({
         inputMode="decimal"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-ink-100 outline-none transition focus:border-strava"
+        className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-ink-100 outline-none transition focus:border-brand-light"
       />
       {hint && <span className="mt-1 block text-xs leading-snug text-ink-500">{hint}</span>}
     </label>

@@ -23,7 +23,7 @@ export function ConnectPanel({ stravaConfigured }: { stravaConfigured: boolean }
       {stravaConfigured ? (
         <a
           href="/api/auth/strava"
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-strava px-5 py-3 font-medium text-white transition hover:bg-strava-dark"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-5 py-3 font-medium text-white transition hover:bg-brand-dark"
         >
           Mit Strava verbinden
         </a>

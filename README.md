@@ -1,8 +1,14 @@
-# Strava KI-Coach
+# Pacer
 
-Eine Web-App, die deinen Strava-Account anbindet, dein Training sportwissenschaftlich
-auswertet und daraus mit Claude eine Analyse, konkrete Tipps und einen Trainingsplan
-erstellt. Alle Daten bleiben in einer lokalen SQLite-Datei.
+Pacer wertet dein Ausdauertraining sportwissenschaftlich aus, erklärt dir mit Claude
+deine Form und schreibt dir einen Trainingsplan, der zu deinem tatsächlichen Niveau
+passt. Die Aktivitäten kommen aus Strava.
+
+> Pacer ist ein eigenständiges Angebot und gehört nicht zu Strava. Strava ist
+> ausschließlich Datenquelle. Wer die App öffentlich betreibt, muss die
+> [Strava-Markenrichtlinien](https://developers.strava.com/guidelines/) einhalten —
+> unter anderem den Hinweis „powered by Strava" (steht im Footer) und den offiziellen
+> „Connect with Strava"-Button.
 
 ## Was die App macht
 

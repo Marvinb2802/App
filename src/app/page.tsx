@@ -174,7 +174,7 @@ export default async function Dashboard({
         <Card
           title="Letzte Einheiten"
           action={
-            <Link href="/analyse" className="text-sm text-strava hover:underline">
+            <Link href="/analyse" className="text-sm text-brand-light hover:underline">
               KI-Analyse öffnen →
             </Link>
           }
@@ -208,7 +208,7 @@ export default async function Dashboard({
           </ul>
           <Link
             href="/einstellungen"
-            className="mt-4 inline-block text-sm text-strava hover:underline"
+            className="mt-4 inline-block text-sm text-brand-light hover:underline"
           >
             Echte Werte hinterlegen →
           </Link>
@@ -263,15 +263,16 @@ function Landing({ error }: { error?: string }) {
   return (
     <div className="mx-auto max-w-3xl py-10">
       <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-        Dein Training,
+        Du trainierst.
         <br />
-        <span className="text-strava">von einer KI gelesen.</span>
+        <span className="text-brand-light">Pacer sagt dir, was es bringt.</span>
       </h1>
 
       <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-300">
-        Verbinde Strava, und die App berechnet Fitness, Ermüdung und Form aus deinen echten
-        Einheiten. Claude wertet daraus aus, was gut läuft und was dich gerade bremst – und
-        schreibt dir daraus einen Trainingsplan, der zu deinem Ausgangsniveau passt.
+        Pacer berechnet aus deinen Einheiten Fitness, Ermüdung und Form – dieselben Kennzahlen,
+        mit denen Trainer arbeiten. Eine KI liest daraus, was gerade gut läuft und was dich
+        bremst, und schreibt dir einen Trainingsplan, der zu deinem echten Niveau passt.
+        Deine Aktivitäten holt sich Pacer aus Strava.
       </p>
 
       {error && (

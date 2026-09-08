@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
   const code = params.get("code");
   const state = params.get("state");
   const store = await cookies();
-  const expectedState = store.get("sac_oauth_state")?.value;
-  store.delete("sac_oauth_state");
+  const expectedState = store.get("pacer_oauth_state")?.value;
+  store.delete("pacer_oauth_state");
 
   if (!code) return back("/?error=kein_code");
   if (!state || state !== expectedState) return back("/?error=ungueltiger_state");

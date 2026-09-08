@@ -101,7 +101,7 @@ export function ChatPanel({ history, disabled }: { history: Message[]; disabled:
             <div
               className={
                 message.role === "user"
-                  ? "max-w-[85%] rounded-2xl rounded-br-sm bg-strava px-4 py-2.5 text-white"
+                  ? "max-w-[85%] rounded-2xl rounded-br-sm bg-brand px-4 py-2.5 text-white"
                   : "max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm border border-ink-700 bg-ink-900 px-4 py-2.5 leading-relaxed text-ink-100"
               }
             >
@@ -134,12 +134,12 @@ export function ChatPanel({ history, disabled }: { history: Message[]; disabled:
           onChange={(event) => setInput(event.target.value)}
           disabled={disabled || busy}
           placeholder={disabled ? "ANTHROPIC_API_KEY fehlt" : "Deine Frage …"}
-          className="flex-1 rounded-lg border border-ink-700 bg-ink-900 px-4 py-3 text-ink-100 outline-none transition focus:border-strava disabled:opacity-50"
+          className="flex-1 rounded-lg border border-ink-700 bg-ink-900 px-4 py-3 text-ink-100 outline-none transition focus:border-brand-light disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={disabled || busy || input.trim().length === 0}
-          className="rounded-lg bg-strava px-5 py-3 font-medium text-white transition hover:bg-strava-dark disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-brand px-5 py-3 font-medium text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
         >
           Senden
         </button>
