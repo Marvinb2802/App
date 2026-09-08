@@ -28,11 +28,6 @@ type Backend = {
   executor: Executor;
   /** Fuehrt mehrere Anweisungen gemeinsam aus; bei einem Fehler wird zurueckgerollt. */
   transaction<T>(run: (tx: Executor) => Promise<T>): Promise<T>;
-  /**
-   * Fuehrt ein Skript aus mehreren Anweisungen aus. PGlite nimmt in `query`
-   * nur eine einzelne Anweisung an und braucht dafuer einen eigenen Weg.
-   */
-  runScript(sql: string): Promise<void>;
   label: string;
 };
 
@@ -72,9 +67,6 @@ async function createBackend(): Promise<Backend> {
     return {
       executor: pool,
       label: "Postgres",
-      runScript: async (sql) => {
-        await pool.query(sql);
-      },
       async transaction(run) {
         const client = await pool.connect();
         try {
@@ -105,7 +97,6 @@ async function createBackend(): Promise<Backend> {
   return {
     executor: pglite,
     label: "PGlite (eingebettet)",
-    runScript: (sql) => pglite.exec(sql).then(() => undefined),
     transaction: (run) => pglite.transaction((tx) => run(tx)),
   };
 }
@@ -194,109 +185,103 @@ export function bind(text: string, params?: Params): [string, unknown[]] {
 /** Zeitstempel als Text, damit die Werte ueberall gleich aussehen. */
 const NOW = "to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')";
 
-const SCHEMA = `
-  CREATE TABLE IF NOT EXISTS athletes (
-    id             BIGINT PRIMARY KEY,
-    firstname      TEXT,
-    lastname       TEXT,
-    profile        TEXT,
-    city           TEXT,
-    country        TEXT,
-    sex            TEXT,
-    weight_kg      DOUBLE PRECISION,
-    ftp            INTEGER,
-    max_hr         INTEGER,
-    rest_hr        INTEGER,
-    threshold_hr   INTEGER,
-    threshold_pace DOUBLE PRECISION,
-    goal           TEXT,
-    created_at     TEXT NOT NULL DEFAULT ${NOW},
-    updated_at     TEXT NOT NULL DEFAULT ${NOW}
-  );
-
-  CREATE TABLE IF NOT EXISTS tokens (
-    athlete_id    BIGINT PRIMARY KEY REFERENCES athletes(id) ON DELETE CASCADE,
-    access_token  TEXT NOT NULL,
-    refresh_token TEXT NOT NULL,
-    expires_at    BIGINT NOT NULL,
-    scope         TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS activities (
-    id                     BIGINT PRIMARY KEY,
-    athlete_id             BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-    name                   TEXT,
-    sport_type             TEXT,
-    start_date             TEXT NOT NULL,
-    start_date_local       TEXT,
-    distance               DOUBLE PRECISION,
-    moving_time            INTEGER,
-    elapsed_time           INTEGER,
-    total_elevation_gain   DOUBLE PRECISION,
-    average_speed          DOUBLE PRECISION,
-    max_speed              DOUBLE PRECISION,
-    average_heartrate      DOUBLE PRECISION,
-    max_heartrate          DOUBLE PRECISION,
-    average_watts          DOUBLE PRECISION,
-    weighted_average_watts DOUBLE PRECISION,
-    kilojoules             DOUBLE PRECISION,
-    average_cadence        DOUBLE PRECISION,
-    suffer_score           DOUBLE PRECISION,
-    has_heartrate          INTEGER NOT NULL DEFAULT 0,
-    trainer                INTEGER NOT NULL DEFAULT 0,
-    synced_at              TEXT NOT NULL DEFAULT ${NOW}
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_activities_athlete_date
-    ON activities(athlete_id, start_date DESC);
-
-  CREATE TABLE IF NOT EXISTS sync_state (
-    athlete_id     BIGINT PRIMARY KEY REFERENCES athletes(id) ON DELETE CASCADE,
-    last_synced_at TEXT,
-    last_error     TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS ai_reports (
-    id         BIGSERIAL PRIMARY KEY,
-    athlete_id BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-    kind       TEXT NOT NULL,
-    payload    TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT ${NOW}
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_reports_athlete
-    ON ai_reports(athlete_id, created_at DESC);
-
-  CREATE TABLE IF NOT EXISTS plans (
-    id          BIGSERIAL PRIMARY KEY,
-    athlete_id  BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-    goal        TEXT NOT NULL,
-    target_date TEXT,
-    weeks       INTEGER NOT NULL,
-    payload     TEXT NOT NULL,
-    created_at  TEXT NOT NULL DEFAULT ${NOW}
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_plans_athlete
-    ON plans(athlete_id, created_at DESC);
-
-  CREATE TABLE IF NOT EXISTS chat_messages (
-    id         BIGSERIAL PRIMARY KEY,
-    athlete_id BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-    role       TEXT NOT NULL,
-    content    TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT ${NOW}
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_chat_athlete
-    ON chat_messages(athlete_id, id);
-`;
+const SCHEMA: string[] = [
+  `CREATE TABLE IF NOT EXISTS athletes (
+  id             BIGINT PRIMARY KEY,
+  firstname      TEXT,
+  lastname       TEXT,
+  profile        TEXT,
+  city           TEXT,
+  country        TEXT,
+  sex            TEXT,
+  weight_kg      DOUBLE PRECISION,
+  ftp            INTEGER,
+  max_hr         INTEGER,
+  rest_hr        INTEGER,
+  threshold_hr   INTEGER,
+  threshold_pace DOUBLE PRECISION,
+  goal           TEXT,
+  created_at     TEXT NOT NULL DEFAULT ${NOW},
+  updated_at     TEXT NOT NULL DEFAULT ${NOW}
+  )`,
+  `CREATE TABLE IF NOT EXISTS tokens (
+  athlete_id    BIGINT PRIMARY KEY REFERENCES athletes(id) ON DELETE CASCADE,
+  access_token  TEXT NOT NULL,
+  refresh_token TEXT NOT NULL,
+  expires_at    BIGINT NOT NULL,
+  scope         TEXT
+  )`,
+  `CREATE TABLE IF NOT EXISTS activities (
+  id                     BIGINT PRIMARY KEY,
+  athlete_id             BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+  name                   TEXT,
+  sport_type             TEXT,
+  start_date             TEXT NOT NULL,
+  start_date_local       TEXT,
+  distance               DOUBLE PRECISION,
+  moving_time            INTEGER,
+  elapsed_time           INTEGER,
+  total_elevation_gain   DOUBLE PRECISION,
+  average_speed          DOUBLE PRECISION,
+  max_speed              DOUBLE PRECISION,
+  average_heartrate      DOUBLE PRECISION,
+  max_heartrate          DOUBLE PRECISION,
+  average_watts          DOUBLE PRECISION,
+  weighted_average_watts DOUBLE PRECISION,
+  kilojoules             DOUBLE PRECISION,
+  average_cadence        DOUBLE PRECISION,
+  suffer_score           DOUBLE PRECISION,
+  has_heartrate          INTEGER NOT NULL DEFAULT 0,
+  trainer                INTEGER NOT NULL DEFAULT 0,
+  synced_at              TEXT NOT NULL DEFAULT ${NOW}
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_activities_athlete_date
+  ON activities(athlete_id, start_date DESC)`,
+  `CREATE TABLE IF NOT EXISTS sync_state (
+  athlete_id     BIGINT PRIMARY KEY REFERENCES athletes(id) ON DELETE CASCADE,
+  last_synced_at TEXT,
+  last_error     TEXT
+  )`,
+  `CREATE TABLE IF NOT EXISTS ai_reports (
+  id         BIGSERIAL PRIMARY KEY,
+  athlete_id BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+  kind       TEXT NOT NULL,
+  payload    TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT ${NOW}
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_reports_athlete
+  ON ai_reports(athlete_id, created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS plans (
+  id          BIGSERIAL PRIMARY KEY,
+  athlete_id  BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+  goal        TEXT NOT NULL,
+  target_date TEXT,
+  weeks       INTEGER NOT NULL,
+  payload     TEXT NOT NULL,
+  created_at  TEXT NOT NULL DEFAULT ${NOW}
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_plans_athlete
+  ON plans(athlete_id, created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS chat_messages (
+  id         BIGSERIAL PRIMARY KEY,
+  athlete_id BIGINT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+  role       TEXT NOT NULL,
+  content    TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT ${NOW}
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_chat_athlete
+  ON chat_messages(athlete_id, id)`,
+];
 
 /** Legt das Schema beim ersten Zugriff an. Laeuft genau einmal je Prozess. */
 function ensureMigrated(): Promise<void> {
   if (!globalForDb.__migrated) {
     globalForDb.__migrated = getBackend()
-      .then((backend) => backend.runScript(SCHEMA))
+      .then(async ({ executor }) => {
+        // Einzeln statt als ein Skript: gepoolte Verbindungen (etwa Neons
+        // PgBouncer) und PGlite nehmen pro Aufruf nur eine Anweisung an.
+        for (const statement of SCHEMA) await executor.query(statement, []);
+      })
       .catch((error: unknown) => {
         // Ein Fehlschlag darf sich nicht als "erledigt" merken.
         globalForDb.__migrated = undefined;
