@@ -1,14 +1,39 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getCurrentAthlete } from "@/lib/session";
 import { LogoutButton } from "@/components/LogoutButton";
+import { MobileNav } from "@/components/MobileNav";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Pacer",
   description:
     "Pacer liest dein Ausdauertraining, erklaert dir deine Form und schreibt dir einen Trainingsplan, der zu deinem tatsaechlichen Niveau passt.",
+  applicationName: "Pacer",
+  // Startet vom Home-Bildschirm ohne Browser-Leiste, mit dunkler Statusleiste.
+  appleWebApp: {
+    capable: true,
+    title: "Pacer",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icon-180.png", sizes: "180x180", type: "image/png" }],
+  },
+  other: {
+    // Next setzt nur den standardisierten Namen. Aeltere iOS-Versionen
+    // brauchen zusaetzlich Apples eigenen, sonst bleibt die Browser-Leiste.
+    "apple-mobile-web-app-capable": "yes",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0c10",
+  // viewport-fit deckt bei Geraeten mit Aussparung auch die Raender ab.
+  viewportFit: "cover",
+  width: "device-width",
+  initialScale: 1,
 };
 
 const NAV = [
@@ -27,7 +52,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="de">
       <body className="font-sans antialiased">
-        <header className="sticky top-0 z-20 border-b border-ink-800/80 bg-ink-950/85 backdrop-blur">
+        <header
+          className="sticky top-0 z-20 border-b border-ink-800/80 bg-ink-950/85 backdrop-blur"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-5 py-3">
             <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-sm font-bold text-white">
@@ -37,7 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </Link>
 
             {athlete && (
-              <nav className="flex flex-wrap items-center gap-1 text-sm">
+              <nav className="hidden flex-wrap items-center gap-1 text-sm sm:flex">
                 {NAV.map((item) => (
                   <Link
                     key={item.href}
@@ -61,7 +89,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
         <main className="mx-auto w-full max-w-6xl px-5 py-8">{children}</main>
 
-        <footer className="mx-auto max-w-6xl space-y-2 px-5 pb-10 pt-4 text-xs leading-relaxed text-ink-500">
+        {athlete && <MobileNav />}
+
+        <footer className="mx-auto max-w-6xl space-y-2 px-5 pb-28 pt-4 text-xs leading-relaxed text-ink-500 sm:pb-10">
           <p>
             Trainingsempfehlungen ohne medizinische Prüfung. Bei Schmerzen, anhaltender Erschöpfung
             oder Krankheit gehört die Entscheidung zu einer Ärztin oder einem Arzt, nicht zu dieser App.

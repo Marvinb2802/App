@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FitnessPoint } from "@/lib/metrics";
 
 const SERIES = [
@@ -9,9 +9,24 @@ const SERIES = [
   { key: "tsb", label: "Form", color: "#199e70", hint: "Fitness minus Ermüdung" },
 ] as const;
 
-const WIDTH = 860;
-const HEIGHT = 260;
+const WIDE = { width: 860, height: 260, days: 180 };
+const NARROW = { width: 420, height: 260, days: 90 };
 const PAD = { top: 16, right: 56, bottom: 26, left: 40 };
+
+/** Erkennt Handybreite, damit das Diagramm dort nicht flachgedrueckt wird. */
+function useNarrowScreen(): boolean {
+  const [narrow, setNarrow] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 640px)");
+    const update = () => setNarrow(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  return narrow;
+}
 
 /**
  * Fitness, Ermuedung und Form auf einer gemeinsamen Achse - alle drei Reihen
@@ -20,8 +35,10 @@ const PAD = { top: 16, right: 56, bottom: 26, left: 40 };
 export function FitnessChart({ points }: { points: FitnessPoint[] }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const narrow = useNarrowScreen();
+  const { width: WIDTH, height: HEIGHT, days } = narrow ? NARROW : WIDE;
 
-  const data = useMemo(() => points.slice(-180), [points]);
+  const data = useMemo(() => points.slice(-days), [points, days]);
 
   const scales = useMemo(() => {
     const values = data.flatMap((p) => [p.ctl, p.atl, p.tsb]);
@@ -35,7 +52,7 @@ export function FitnessChart({ points }: { points: FitnessPoint[] }) {
       PAD.top + (1 - (value - min) / span) * (HEIGHT - PAD.top - PAD.bottom);
 
     return { x, y, min, max };
-  }, [data]);
+  }, [data, WIDTH, HEIGHT]);
 
   if (data.length < 2) {
     return (
@@ -65,7 +82,9 @@ export function FitnessChart({ points }: { points: FitnessPoint[] }) {
     <figure className="m-0">
       <figcaption className="mb-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span className="text-sm font-medium text-ink-100">Fitness, Ermüdung und Form</span>
-        <span className="text-xs text-ink-500">letzte {data.length} Tage · Belastungspunkte</span>
+        <span className="text-xs text-ink-500">
+          letzte {data.length} Tage · Belastungspunkte
+        </span>
       </figcaption>
 
       <div className="relative">

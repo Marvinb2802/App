@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Pacer">
+  <rect width="512" height="512" fill="#0f6f85"/>
+  <!-- Formkurve: das, was die App zeigt -->
+  <path d="M96 340 C 150 340, 170 250, 220 250 S 300 300, 340 210 S 410 150, 440 150"
+        fill="none" stroke="#3fc3dc" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="440" cy="150" r="26" fill="#ffffff"/>
+  <text x="72" y="180" font-family="Helvetica, Arial, sans-serif" font-size="150"
+        font-weight="700" fill="#ffffff">P</text>
+</svg>

@@ -51,8 +51,11 @@ export function StatTile({
   return (
     <div className="rounded-xl border border-ink-800 bg-ink-900/60 px-4 py-3.5">
       <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-500">
-        {accent && <span className="h-2 w-2 rounded-full" style={{ background: accent }} />}
-        {label}
+        {accent && (
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: accent }} />
+        )}
+        {/* Lange Bezeichnungen muessen in schmalen Kacheln umbrechen duerfen. */}
+        <span className="min-w-0 break-words">{label}</span>
       </div>
       <div className="mt-1.5 flex items-baseline gap-1">
         <span className="text-2xl font-semibold tabular-nums text-ink-100">{value}</span>

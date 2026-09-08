@@ -143,6 +143,18 @@ Die Diagrammfarben (Blau / Orange / Grün) sind gegen die dunkle Diagrammfläche
 Helligkeitsband, Sättigung, Kontrast und Unterscheidbarkeit bei Farbsehschwäche
 geprüft; der Wochenumfang lässt sich zusätzlich als Tabelle anzeigen.
 
+## Auf dem Handy
+
+Pacer ist als installierbare Web-App ausgelegt: Web-App-Manifest, eigene Icons,
+`display: standalone` und die Apple-Meta-Tags. Auf dem iPhone in Safari die Seite
+öffnen, **Teilen → Zum Home-Bildschirm** — danach startet Pacer mit eigenem Icon
+und ohne Browser-Leiste. Die Navigation liegt auf Handybreite als Leiste am unteren
+Rand, oberhalb der Systemgesten (`env(safe-area-inset-bottom)`).
+
+Ein Service Worker ist bewusst nicht dabei: Er brächte Offline-Betrieb, aber auch
+Caching, das veraltete Stände ausliefert. Auf iOS ist er für die Installation nicht
+nötig; Chrome auf Android verlangt ihn für den vollen Installationsdialog.
+
 ## Online stellen
 
 Pacer läuft auf jeder Plattform, die Next.js ausführt. Der übliche Weg:
