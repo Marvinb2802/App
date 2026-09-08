@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-950: #0a0c10;
+  --color-ink-900: #10131a;
+  --color-ink-850: #151922;
+  --color-ink-800: #1c212c;
+  --color-ink-700: #2a3040;
+  --color-ink-500: #6b7488;
+  --color-ink-300: #a8b0c0;
+  --color-ink-100: #e6e9f0;
+
+  --color-strava: #fc4c02;
+  --color-strava-dark: #d63f02;
+
+  /* Serienfarben: Slots 1-3 der validierten Dark-Mode-Kategorialpalette.
+     Geprueft gegen die Diagrammflaeche #151922 (Lightness-Band, Chroma,
+     Farbsehschwaeche-Trennung ueber alle Paare, Kontrast). */
+  --color-fitness: #3987e5;
+  --color-fatigue: #d95926;
+  --color-form: #199e70;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background:
+    radial-gradient(1100px 600px at 80% -10%, rgba(252, 76, 2, 0.10), transparent 60%),
+    radial-gradient(900px 500px at 0% 0%, rgba(78, 168, 222, 0.08), transparent 55%),
+    var(--color-ink-950);
+  color: var(--color-ink-100);
+  min-height: 100vh;
+}
+
+/* Dezente Scrollbalken, damit lange Listen ruhig wirken. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-700) transparent;
+}
