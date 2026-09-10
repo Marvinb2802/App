@@ -118,9 +118,27 @@ Die Grenze ergibt sich aus der Fairness-Garantie und ist nicht verhandelbar:
 - `shop_test.dart` enthält einen Wächter: käme je ein Angebot dazu, das anders
   wirkt als Aussehen oder Hinweise, schlägt er an.
 
-Sollte später echtes Geld ins Spiel kommen, gilt dasselbe: nur Kosmetik. Dazu
-kämen Pflichten, die noch nicht erfüllt sind (Impressum, AGB, Widerruf,
-Zahlungsabwicklung über die App-Stores).
+### Käufe mit echtem Geld
+
+Der Kaufweg ist gebaut (`data/purchases.dart`, `in_app_purchase`): Angebote
+laden, kaufen, **Käufe wiederherstellen** (bei Apple Pflicht). Verkauft wird
+ausschließlich Kosmetik — `paid_purchase_test.dart` hat einen Wächter, der
+anschlägt, sobald ein bezahltes Angebot etwas anderes freischaltet als ein
+Farbset.
+
+Scharf ist das noch nicht, und zwar aus Gründen, die sich nicht im Code lösen
+lassen:
+
+- Ein Entwicklerkonto ist nötig (Apple 99 $/Jahr, Google 25 $ einmalig).
+- Die Produktkennungen aus `paidItems` müssen in App Store Connect und der
+  Play Console angelegt und freigegeben werden.
+- Digitale Güter müssen über das Bezahlsystem der Plattform laufen; ein
+  eigener Bezahlweg ist dort nicht zulässig.
+- Rechtlich fehlen Impressum, AGB, Datenschutzerklärung und
+  Widerrufsbelehrung; beim Verkauf kommen Gewerbe und Steuer dazu.
+- Im Browser gibt es keine Käufe — dort meldet die Oberfläche das offen.
+
+Getestet ist der Ablauf gegen eine Attrappe, nicht gegen einen echten Store.
 
 ## Technik
 

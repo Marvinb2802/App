@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/purchases.dart';
 import 'game_mode.dart';
 import 'providers.dart';
 
@@ -154,6 +155,31 @@ class ShopController extends Notifier<ShopState> {
     state = state.copyWith(palette: id);
     unawaited(_save());
     return true;
+  }
+
+  /// Kauft [item] mit echtem Geld ueber den Store.
+  ///
+  /// Freigeschaltet wird dasselbe wie im Sterne-Shop — nur Aussehen. Sterne
+  /// werden dabei weder verlangt noch gutgeschrieben.
+  Future<PurchaseResult> buyWithMoney(PaidItem item) async {
+    final antwort = await ref.read(purchasesProvider).buy(item);
+    if (antwort.granted.isNotEmpty) {
+      state = state.copyWith(owned: {...state.owned, ...antwort.granted});
+      await _save();
+    }
+    return antwort.result;
+  }
+
+  /// Holt frueher gekaufte Dinge zurueck — etwa auf einem neuen Geraet.
+  /// Gibt zurueck, wie viele Dinge dazugekommen sind.
+  Future<int> restorePurchases() async {
+    final zurueck = await ref.read(purchasesProvider).restore();
+    final neu = zurueck.difference(state.owned);
+    if (neu.isNotEmpty) {
+      state = state.copyWith(owned: {...state.owned, ...neu});
+      await _save();
+    }
+    return neu.length;
   }
 
   Future<void> _save() async {

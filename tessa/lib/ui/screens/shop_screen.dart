@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/game_mode.dart';
+import '../../application/providers.dart';
 import '../../application/shop.dart';
+import '../../data/purchases.dart';
 import '../format.dart';
 import '../theme/tessa_theme.dart';
 
@@ -61,6 +63,8 @@ class ShopScreen extends ConsumerWidget {
               gesperrt: item.kind == ShopKind.hints && imTagesraetsel,
             ),
           const Divider(height: 40),
+          const _PaidSection(),
+          const Divider(height: 40),
           Text('Farbset wählen', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           RadioGroup<String>(
@@ -107,6 +111,147 @@ class ShopScreen extends ConsumerWidget {
         'mono' => 'Ein Ton',
         _ => 'Standard',
       };
+}
+
+/// Angebote, die mit echtem Geld gekauft werden — ausschliesslich Aussehen.
+class _PaidSection extends ConsumerWidget {
+  const _PaidSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final angebote = ref.watch(paidOffersProvider);
+    final shop = ref.watch(shopProvider);
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Mit Geld kaufen', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text(
+          'Nur Aussehen — für Geld gibt es keine Vorteile im Spiel, keine '
+          'Rettung nach dem Ende und keine anderen Teile. Die Zahlung läuft '
+          'über den App Store deines Geräts.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
+        angebote.when(
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (fehler, _) => Text(
+            'Die Angebote ließen sich nicht laden.',
+            key: const Key('paid-error'),
+            style: theme.textTheme.bodyMedium,
+          ),
+          data: (liste) => liste.isEmpty
+              ? Text(
+                  'Hier nicht verfügbar. Käufe gibt es nur in der App aus dem '
+                  'App Store, nicht im Browser.',
+                  key: const Key('paid-unavailable'),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final angebot in liste)
+                      _PaidTile(
+                        angebot: angebot,
+                        gekauft: angebot.item.grants
+                            .every((id) => shop.ownsItem(id)),
+                      ),
+                    TextButton(
+                      key: const Key('restore-purchases'),
+                      onPressed: () async {
+                        final anzahl = await ref
+                            .read(shopProvider.notifier)
+                            .restorePurchases();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(anzahl == 0
+                              ? 'Nichts wiederherzustellen.'
+                              : '$anzahl wiederhergestellt.'),
+                        ));
+                      },
+                      child: const Text('Käufe wiederherstellen'),
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PaidTile extends ConsumerWidget {
+  const _PaidTile({required this.angebot, required this.gekauft});
+
+  final PricedItem angebot;
+  final bool gekauft;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(angebot.item.name,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(
+                    angebot.item.description,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            gekauft
+                ? const Icon(Icons.check_circle_rounded,
+                    color: Color(0xFF3DD6A0))
+                : FilledButton(
+                    key: Key('pay-${angebot.item.productId}'),
+                    onPressed: () async {
+                      final ergebnis = await ref
+                          .read(shopProvider.notifier)
+                          .buyWithMoney(angebot.item);
+                      if (!context.mounted) return;
+                      final text = switch (ergebnis) {
+                        PurchaseResult.bought => 'Gekauft — viel Freude damit.',
+                        PurchaseResult.restored => 'Wiederhergestellt.',
+                        PurchaseResult.canceled => 'Abgebrochen.',
+                        PurchaseResult.unavailable =>
+                          'Hier nicht verfügbar.',
+                        PurchaseResult.failed =>
+                          'Der Kauf hat nicht geklappt.',
+                      };
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text(text)));
+                    },
+                    child: Text(angebot.price),
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _ItemTile extends ConsumerWidget {

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/score_dao.dart';
+import '../data/purchases.dart';
 import '../data/store.dart';
 import '../domain/model/game_state.dart';
 import '../domain/rules/placement.dart';
@@ -30,6 +31,15 @@ final seedSourceProvider = Provider<SeedSource>((ref) {
 /// Tessa laeuft auch ohne: dann wird nur nichts gesichert. main() ersetzt
 /// diesen Wert beim Start, Tests lassen ihn null.
 final storeProvider = Provider<TessaStore?>((ref) => null);
+
+/// Kaeufe mit echtem Geld. Standard ist "geht hier nicht" — main() setzt auf
+/// dem Geraet die Anbindung an den Store ein.
+final purchasesProvider =
+    Provider<Purchases>((ref) => const UnavailablePurchases());
+
+/// Die Angebote samt Preisen, wie der Store sie nennt.
+final paidOffersProvider = FutureProvider<List<PricedItem>>(
+    (ref) => ref.watch(purchasesProvider).load());
 
 /// Eine beim Start geladene, noch offene Partie.
 final restoredGameProvider = Provider<GameState?>((ref) => null);

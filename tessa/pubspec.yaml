@@ -39,6 +39,7 @@ dependencies:
   path: ^1.9.1
   shared_preferences: ^2.5.5
   audioplayers: ^6.8.1
+  in_app_purchase: ^3.3.0
 
 dev_dependencies:
   flutter_test:

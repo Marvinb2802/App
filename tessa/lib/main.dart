@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +8,7 @@ import 'application/shop.dart';
 import 'application/sound.dart';
 import 'data/database.dart';
 import 'data/prefs_store.dart';
+import 'data/purchases.dart';
 import 'data/store.dart';
 import 'domain/model/game_state.dart';
 
@@ -41,9 +43,22 @@ Future<void> main() async {
     }
   }
 
+  // Kaeufe gibt es nur in der echten App: im Browser fehlt das Bezahlsystem
+  // der Plattform.
+  Purchases purchases = const UnavailablePurchases();
+  if (!kIsWeb) {
+    try {
+      final store = StorePurchases();
+      if (await store.available()) purchases = store;
+    } catch (_) {
+      purchases = const UnavailablePurchases();
+    }
+  }
+
   runApp(
     ProviderScope(
       overrides: [
+        purchasesProvider.overrideWithValue(purchases),
         storeProvider.overrideWithValue(store),
         restoredGameProvider.overrideWithValue(restored),
         initialHapticsProvider.overrideWithValue(haptics),
