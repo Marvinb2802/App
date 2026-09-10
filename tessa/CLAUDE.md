@@ -116,8 +116,9 @@ tessa/
 │  │  ├─ score_dao.dart            Bestenliste, Statistik
 │  │  └─ settings_repository.dart  Einstellungen
 │  ├─ ui/
-│  │  ├─ screens/                  home, game, scores, settings
-│  │  ├─ widgets/                  board_view, piece_tray, score_bar, combo_badge
+│  │  ├─ screens/                  game_screen samt Abschlussanzeige
+│  │  ├─ widgets/                  board_view, piece_tray, piece_view,
+│  │  │                            cell_tile, score_bar
 │  │  └─ theme/                    Farben, Maße, Animationsdauern
 │  └─ l10n/                        Texte (Deutsch zuerst)
 └─ test/
@@ -134,4 +135,10 @@ tessa/
 - `application/` steht: `GameController` (Zug, Undo, Neustart, Replay mit
   demselben Seed) und `DragController` samt Vorschau. Die Seed-Quelle ist ein
   Provider und in Tests durch einen festen Wert ersetzbar.
-- Als Nächstes: `ui/` mit Brett und Drag-and-Drop, danach `data/` mit sqflite.
+- `ui/` steht: Brett mit Drag-and-Drop und Zielvorschau (auch für unerlaubte
+  Züge), Ablage der drei Teile, Punkteleiste mit Combo, Undo und sichtbarem
+  Seed, dazu die Abschlussanzeige mit „neue Runde" und „dieselbe noch einmal".
+  Ein Widget-Test zieht ein Teil wirklich per Geste aufs Brett.
+- Als Nächstes: `data/` mit sqflite — laufende Partie sichern, Bestenliste.
+- Noch offen in der Oberfläche: Animationen beim Auflösen, Startbildschirm,
+  Anzeige der gefallenen Linien.
