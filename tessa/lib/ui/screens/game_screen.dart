@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../domain/model/board.dart';
 import '../widgets/board_view.dart';
+import '../widgets/move_feedback.dart';
 import '../widgets/piece_tray.dart';
 import '../widgets/score_bar.dart';
 import 'scores_screen.dart';
@@ -32,6 +33,7 @@ class GameScreen extends ConsumerWidget {
                 Column(
                   children: [
                     const ScoreBar(),
+                    const MoveFeedback(),
                     Expanded(
                       child: Center(child: BoardView(cellSize: cellSize)),
                     ),

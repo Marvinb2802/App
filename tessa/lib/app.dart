@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'ui/screens/game_screen.dart';
+import 'ui/screens/home_screen.dart';
 import 'ui/theme/tessa_theme.dart';
 
 class TessaApp extends StatelessWidget {
@@ -13,7 +13,7 @@ class TessaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: tessaTheme(Brightness.light),
       darkTheme: tessaTheme(Brightness.dark),
-      home: const GameScreen(),
+      home: const HomeScreen(),
     );
   }
 }

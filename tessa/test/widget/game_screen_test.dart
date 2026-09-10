@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tessa/app.dart';
+import 'package:tessa/ui/screens/game_screen.dart';
+import 'package:tessa/ui/theme/tessa_theme.dart';
 import 'package:tessa/application/game_controller.dart';
 import 'package:tessa/application/providers.dart';
 import 'package:tessa/domain/model/board.dart';
@@ -35,7 +36,12 @@ Future<ProviderContainer> pumpGame(
         if (state != null)
           gameControllerProvider.overrideWith(() => FixedGame(state)),
       ],
-      child: const TessaApp(),
+      // Direkt der Spielbildschirm: der Einstieg der App ist der
+      // Startbildschirm, hier geht es aber um das Spiel selbst.
+      child: MaterialApp(
+        theme: tessaTheme(Brightness.light),
+        home: const GameScreen(),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -247,5 +253,43 @@ void main() {
     expect(find.byKey(const Key('open-scores')), findsOneWidget);
     expect(find.byType(BoardView), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+  testWidgets('nach einer Aufloesung steht da, was der Zug gebracht hat',
+      (tester) async {
+    final container = await pumpGame(
+      tester,
+      state: stateWith(
+        board: Board.fromRows(const [
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '#######.',
+        ]),
+        hand: Hand.of([dot, dot, dot]),
+      ),
+    );
+    expect(find.byKey(const Key('move-feedback')), findsNothing);
+
+    container.read(gameControllerProvider.notifier).place(slot: 0, x: 7, y: 7);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('move-feedback')), findsOneWidget);
+    expect(find.text('+11 · 1 Linie'), findsOneWidget);
+  });
+
+  testWidgets('ein Zug ohne Aufloesung meldet nichts', (tester) async {
+    final container = await pumpGame(
+      tester,
+      state: stateWith(board: Board.empty(), hand: Hand.of([dot, dot, dot])),
+    );
+
+    container.read(gameControllerProvider.notifier).place(slot: 0, x: 3, y: 3);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('move-feedback')), findsNothing);
   });
 }

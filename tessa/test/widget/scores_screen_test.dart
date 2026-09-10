@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:tessa/app.dart';
+import 'package:tessa/ui/screens/game_screen.dart';
+import 'package:tessa/ui/theme/tessa_theme.dart';
 import 'package:tessa/application/providers.dart';
 import 'package:tessa/data/database.dart';
 import 'package:tessa/ui/screens/scores_screen.dart';
@@ -28,7 +29,10 @@ void main() {
           seedSourceProvider.overrideWithValue(() => 2024),
           databaseProvider.overrideWithValue(database),
         ],
-        child: const TessaApp(),
+        child: MaterialApp(
+          theme: tessaTheme(Brightness.light),
+          home: const GameScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();

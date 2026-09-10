@@ -116,10 +116,10 @@ tessa/
 │  │  ├─ score_dao.dart            Bestenliste mit Seed je Runde
 │  │  └─ settings_repository.dart  Einstellungen als Schlüssel-Wert-Paare
 │  ├─ ui/
-│  │  ├─ screens/                  game_screen samt Abschlussanzeige,
-│  │  │                            scores_screen mit der Bestenliste
+│  │  ├─ screens/                  home_screen (Einstieg), game_screen samt
+│  │  │                            Abschlussanzeige, scores_screen
 │  │  ├─ widgets/                  board_view, piece_tray, piece_view,
-│  │  │                            cell_tile, score_bar
+│  │  │                            cell_tile, score_bar, move_feedback
 │  │  └─ theme/                    Farben, Maße, Animationsdauern
 │  └─ l10n/                        Texte (Deutsch zuerst)
 └─ test/
@@ -152,8 +152,15 @@ tessa/
 - Die Bestenliste ist sichtbar: erreichbar aus der Punkteleiste und von der
   Abschlussanzeige, mit Seed und Datum je Runde. Jeder Eintrag lässt sich mit
   seinem Seed noch einmal spielen.
-- Noch offen: Animationen beim Auflösen, Startbildschirm, Anzeige der
-  gefallenen Linien.
+- Der Startbildschirm ist der Einstieg: laufende Runde fortsetzen, neue Runde,
+  Bestenliste, Bestpunktzahl — und „Runde mit Seed spielen", damit sich eine
+  Runde gezielt nachspielen lässt.
+- Nach einer Auflösung steht über dem Brett, was der Zug gebracht hat: Punkte,
+  Zahl der gefallenen Linien und der angewandte Combo-Faktor.
+- Noch offen: Animationen beim Auflösen und das Hervorheben der gefallenen
+  Linien auf dem Brett selbst. Beides bewusst zurückgestellt, bis die
+  Oberfläche einmal in Augenschein genommen wurde — Bewegung lässt sich nicht
+  sinnvoll blind bauen.
 
 ## Tests
 
@@ -170,3 +177,7 @@ jeweils gegen eine absichtlich eingebaute Verletzung geprüft:
 
 Widget-Tests gegen die Datenbank brauchen `databaseFactoryFfiNoIsolate` —
 nur so laufen die Futures in der künstlichen Zeit eines Widget-Tests zu Ende.
+
+Widget-Tests mounten den Bildschirm, um den es geht, direkt in einer
+`MaterialApp` — nicht `TessaApp`, deren Einstieg der Startbildschirm ist.
+Nur `home_screen_test.dart` startet die ganze App.
