@@ -75,14 +75,35 @@ void main() {
     expect(c.read(hintProvider).left, HintState.perRound + 6);
   });
 
-  test('im Tagesraetsel sind gekaufte Hinweise gesperrt', () {
+  test('gekaufte Hinweise gelten auch im Tagesraetsel', () {
+    // Geaendert auf Wunsch des Auftraggebers: Kaeufe duerfen Vorteile bringen,
+    // auch im Raetsel des Tages.
     final c = container(stars: 100);
     c.read(gameModeProvider.notifier).set(GameMode.daily);
 
-    expect(c.read(shopProvider.notifier).buy(item('hints3')), isFalse,
-        reason: 'sonst waeren die Ergebnisse des Tages nicht vergleichbar');
-    expect(c.read(hintProvider).left, HintState.perRound);
-    expect(c.read(shopProvider).stars, 100, reason: 'nichts abgebucht');
+    expect(c.read(shopProvider.notifier).buy(item('hints3')), isTrue);
+    expect(c.read(hintProvider).left, HintState.perRound + 3);
+  });
+
+  test('Zurueck-Zuege lassen sich nachkaufen', () {
+    final c = container(stars: 100);
+    final vorher = c.read(gameControllerProvider).undosLeft;
+
+    expect(c.read(shopProvider.notifier).buy(item('undo3')), isTrue);
+    expect(c.read(gameControllerProvider).undosLeft, vorher + 3);
+  });
+
+  test('Weiterspielen wandert in den Vorrat', () {
+    final c = container(stars: 100);
+    expect(c.read(shopProvider).revives, 0);
+
+    expect(c.read(shopProvider.notifier).buy(item('revive1')), isTrue);
+    expect(c.read(shopProvider).revives, 1);
+
+    expect(c.read(shopProvider.notifier).consumeRevive(), isTrue);
+    expect(c.read(shopProvider).revives, 0);
+    expect(c.read(shopProvider.notifier).consumeRevive(), isFalse,
+        reason: 'leerer Vorrat');
   });
 
   test('ein Farbset laesst sich erst nach dem Kauf waehlen', () {
@@ -120,13 +141,20 @@ void main() {
   });
 
   test('kein Angebot beruehrt die Steinfolge', () {
-    // Waechter zur Fairness-Garantie: der Shop kennt nur Aussehen und
-    // Hinweise. Kaeme je ein Angebot dazu, das den Verlauf beeinflusst,
-    // muesste dieser Test scheitern.
+    // Waechter zur Fairness-Garantie in ihrer heutigen Fassung: Vorteile im
+    // Verlauf sind erlaubt (Hinweise, Zurueck-Zuege, Weiterspielen), Aussehen
+    // ohnehin. Kaeme je ein Angebot dazu, das andere Teile oder eine andere
+    // Reihenfolge verspricht, muesste dieser Test scheitern -- damit waeren
+    // Tagesraetsel, Bestwert je Spielcode und Nachspielen hinfaellig.
     for (final angebot in shopItems) {
       expect(
         angebot.kind,
-        anyOf(ShopKind.hints, ShopKind.palette),
+        anyOf(
+          ShopKind.hints,
+          ShopKind.undos,
+          ShopKind.revive,
+          ShopKind.palette,
+        ),
         reason: '${angebot.id} ist von anderer Art',
       );
     }

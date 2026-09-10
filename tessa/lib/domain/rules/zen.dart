@@ -38,6 +38,17 @@ GameState rescue(GameState state, {int maxHands = 5}) {
   );
 }
 
+/// Rettet so lange, bis wieder gespielt werden kann.
+///
+/// Wird fuer das gekaufte Weiterspielen nach dem Ende benutzt.
+GameState rescueUntilPlayable(GameState state, {int maxRuns = 5}) {
+  var jetzt = state;
+  for (var lauf = 0; lauf < maxRuns && jetzt.isOver; lauf++) {
+    jetzt = rescue(jetzt);
+  }
+  return jetzt;
+}
+
 Board _clearFullestRow(Board board) {
   var besteReihe = 0;
   var meiste = -1;

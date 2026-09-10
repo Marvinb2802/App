@@ -11,9 +11,11 @@ import '../widgets/board_view.dart';
 import '../widgets/move_feedback.dart';
 import '../widgets/piece_tray.dart';
 import '../../application/round_log.dart';
+import '../../application/shop.dart';
 import '../format.dart';
 import '../widgets/score_bar.dart';
 import 'scores_screen.dart';
+import 'shop_screen.dart';
 
 class GameScreen extends ConsumerWidget {
   const GameScreen({super.key});
@@ -154,6 +156,7 @@ class _GameOverOverlay extends ConsumerWidget {
     final streak = ref.watch(dailyStatusProvider).value?.streak ?? 0;
     final best = ref.watch(bestScoreProvider).value ?? 0;
     final codeBest = ref.watch(bestForCodeProvider(state.seed)).value ?? 0;
+    final vorrat = ref.watch(shopProvider).revives;
     final controller = ref.read(gameControllerProvider.notifier);
     final theme = Theme.of(context);
     final rekord = state.score >= best && state.score > 0;
@@ -223,6 +226,26 @@ class _GameOverOverlay extends ConsumerWidget {
                     const SizedBox(height: 20),
                     _Analyse(log: ref.watch(roundLogProvider)),
                     const SizedBox(height: 20),
+                    if (vorrat > 0)
+                      FilledButton.icon(
+                        key: const Key('revive'),
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: Text('Weiterspielen ($vorrat übrig)'),
+                        onPressed: () =>
+                            ref.read(gameControllerProvider.notifier).revive(),
+                      )
+                    else
+                      OutlinedButton.icon(
+                        key: const Key('revive-buy'),
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: const Text('Weiterspielen holen'),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const ShopScreen(),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
                     FilledButton.icon(
                       key: const Key('share'),
                       icon: const Icon(Icons.ios_share_rounded),

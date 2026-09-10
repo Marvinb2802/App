@@ -110,6 +110,25 @@ class GameController extends Notifier<GameState> {
     unawaited(_persist(state));
   }
 
+  /// Legt zusaetzliche Zurueck-Zuege nach — aus dem Shop.
+  void addUndos(int count) {
+    if (count <= 0) return;
+    state = state.copyWith(undosLeft: state.undosLeft + count);
+  }
+
+  /// Spielt nach dem Ende weiter, wenn ein Weiterspielen im Vorrat ist.
+  ///
+  /// Es wird Platz geschaffen (naechste Hand aus der Steinfolge, notfalls die
+  /// vollste Reihe geraeumt) — die Steinfolge selbst bleibt die des
+  /// Spielcodes. Punkte und Verlauf bleiben erhalten.
+  bool revive() {
+    if (!state.isOver) return false;
+    if (!ref.read(shopProvider.notifier).consumeRevive()) return false;
+    state = rescueUntilPlayable(state);
+    unawaited(_persist(state));
+    return true;
+  }
+
   /// Spielt dieselbe Runde noch einmal: gleicher Code, gleiche Steinfolge.
   void replay() => restart(seed: state.seed);
 

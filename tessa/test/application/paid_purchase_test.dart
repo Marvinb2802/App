@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tessa/application/hint_controller.dart';
 import 'package:tessa/application/providers.dart';
 import 'package:tessa/application/shop.dart';
 import 'package:tessa/application/sound.dart';
@@ -117,17 +118,54 @@ void main() {
     expect(await container.read(shopProvider.notifier).restorePurchases(), 0);
   });
 
-  test('fuer Geld gibt es ausschliesslich Aussehen', () {
-    // Waechter zur Fairness-Garantie: kaeme je ein bezahltes Angebot dazu,
-    // das etwas anderes freischaltet als ein Farbset, schlaegt dieser Test an.
+  test('bezahlte Hinweise und Zurueck-Zuege wirken sofort', () async {
+    final a = aufbau();
+    final vorherUndos = a.container.read(gameControllerProvider).undosLeft;
+
+    await a.container
+        .read(shopProvider.notifier)
+        .buyWithMoney(angebot('tessa.hints.10'));
+    await a.container
+        .read(shopProvider.notifier)
+        .buyWithMoney(angebot('tessa.undos.10'));
+    await a.container
+        .read(shopProvider.notifier)
+        .buyWithMoney(angebot('tessa.revive.3'));
+
+    expect(a.container.read(hintProvider).left, HintState.perRound + 10);
+    expect(a.container.read(gameControllerProvider).undosLeft,
+        vorherUndos + 10);
+    expect(a.container.read(shopProvider).revives, 3);
+  });
+
+  test('ein abgebrochener Kauf bringt auch keine Hinweise', () async {
+    final a = aufbau(ergebnis: PurchaseResult.canceled);
+    await a.container
+        .read(shopProvider.notifier)
+        .buyWithMoney(angebot('tessa.hints.10'));
+
+    expect(a.container.read(hintProvider).left, HintState.perRound);
+    expect(a.container.read(shopProvider).revives, 0);
+  });
+
+  test('kein bezahltes Angebot beruehrt die Steinfolge', () {
+    // Waechter zur Fairness-Garantie in ihrer heutigen Fassung: Vorteile im
+    // Verlauf duerfen verkauft werden. Dauerhaft freischalten darf ein Kauf
+    // aber nur Aussehen — kaeme je ein Angebot dazu, das andere Teile oder
+    // eine andere Reihenfolge verspricht, schlaegt dieser Test an.
     for (final item in paidItems) {
-      expect(item.grants, isNotEmpty, reason: item.productId);
+      final wirktIrgendwie = item.grants.isNotEmpty ||
+          item.hints > 0 ||
+          item.undos > 0 ||
+          item.revives > 0;
+      expect(wirktIrgendwie, isTrue, reason: '${item.productId} tut nichts');
+
       for (final freigabe in item.grants) {
         expect(
           freigabe.startsWith('palette.'),
           isTrue,
-          reason: '${item.productId} schaltet "$freigabe" frei — '
-              'fuer Geld darf es nur Aussehen geben',
+          reason: '${item.productId} schaltet "$freigabe" dauerhaft frei — '
+              'dauerhaft darf nur Aussehen sein',
         );
       }
     }

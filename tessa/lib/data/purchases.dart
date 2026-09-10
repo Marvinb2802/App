@@ -4,15 +4,19 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 /// Ein Angebot, das mit echtem Geld gekauft werden kann.
 ///
-/// HARTE GRENZE (Fairness-Garantie, siehe CLAUDE.md): Hier darf ausschliesslich
-/// Kosmetik stehen. Nichts, was mit Geld gekauft wird, darf die Steinfolge,
-/// den Spielverlauf oder die Vergleichbarkeit von Ergebnissen beruehren.
+/// GRENZE (Fairness-Garantie, siehe CLAUDE.md): Vorteile im Spielverlauf sind
+/// erlaubt — Hinweise, Zurueck-Zuege, Weiterspielen. Die Steinfolge selbst
+/// darf kein Angebot beruehren, sonst verlieren Tagesraetsel, Bestwert je
+/// Spielcode und das Nachspielen ihre Grundlage.
 class PaidItem {
   const PaidItem({
     required this.productId,
     required this.name,
     required this.description,
-    required this.grants,
+    this.grants = const {},
+    this.hints = 0,
+    this.undos = 0,
+    this.revives = 0,
   });
 
   /// Die Kennung im App Store und bei Google Play.
@@ -21,12 +25,38 @@ class PaidItem {
   final String name;
   final String description;
 
-  /// Welche Dinge der Kauf freischaltet — dieselben Kennungen wie im
-  /// Sterne-Shop, damit beide Wege zum selben Ergebnis führen.
+  /// Welche dauerhaften Dinge der Kauf freischaltet — dieselben Kennungen wie
+  /// im Sterne-Shop, damit beide Wege zum selben Ergebnis führen.
   final Set<String> grants;
+
+  /// Sofort wirksame Mengen.
+  final int hints;
+  final int undos;
+  final int revives;
+
+  /// Verbrauchsgueter lassen sich mehrfach kaufen, Farbsets nur einmal.
+  bool get isConsumable => grants.isEmpty;
 }
 
 const List<PaidItem> paidItems = [
+  PaidItem(
+    productId: 'tessa.hints.10',
+    name: '10 Hinweise',
+    description: 'Zehn Hinweise für die laufende Runde.',
+    hints: 10,
+  ),
+  PaidItem(
+    productId: 'tessa.undos.10',
+    name: '10 Zurück-Züge',
+    description: 'Zehn zusätzliche Undos für die laufende Runde.',
+    undos: 10,
+  ),
+  PaidItem(
+    productId: 'tessa.revive.3',
+    name: '3× Weiterspielen',
+    description: 'Dreimal nach dem Ende weiterspielen, mit deiner Punktzahl.',
+    revives: 3,
+  ),
   PaidItem(
     productId: 'tessa.palettes.all',
     name: 'Alle Farbsets',
@@ -147,10 +177,14 @@ class StorePurchases implements Purchases {
 
     _listen();
     _laufend = Completer<({PurchaseResult result, Set<String> granted})>();
-    // Farbsets sind dauerhaft, also kein Verbrauchsgut.
-    await _store.buyNonConsumable(
-      purchaseParam: PurchaseParam(productDetails: produkt),
-    );
+    final parameter = PurchaseParam(productDetails: produkt);
+    // Hinweise und Weiterspielen sind Verbrauchsgueter und duerfen mehrfach
+    // gekauft werden; Farbsets nur einmal.
+    if (item.isConsumable) {
+      await _store.buyConsumable(purchaseParam: parameter);
+    } else {
+      await _store.buyNonConsumable(purchaseParam: parameter);
+    }
     return _laufend!.future;
   }
 

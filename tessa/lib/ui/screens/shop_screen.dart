@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/game_mode.dart';
 import '../../application/providers.dart';
 import '../../application/shop.dart';
 import '../../data/purchases.dart';
@@ -15,7 +14,6 @@ class ShopScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final shop = ref.watch(shopProvider);
-    final imTagesraetsel = ref.watch(gameModeProvider) == GameMode.daily;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -39,6 +37,15 @@ class ShopScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8),
                   Text('Sterne', style: theme.textTheme.titleMedium),
+                  const Spacer(),
+                  if (shop.revives > 0)
+                    Text(
+                      '${shop.revives}× weiterspielen',
+                      key: const Key('revive-stock'),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -48,20 +55,16 @@ class ShopScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
             child: Text(
               'Sterne bekommst du fürs Spielen: einen je 250 Punkte, dazu '
-              '$starsForDailyGoal fürs Tagesziel. Nichts hier ist mit Geld zu '
-              'kaufen, und nichts verändert die Steinfolge — es gibt keine '
-              'besseren Teile und kein Weiterspielen nach dem Ende.',
+              '$starsForDailyGoal fürs Tagesziel. Kein Angebot verändert die '
+              'Steinfolge — dieselbe Runde bleibt für alle dieselbe, sonst '
+              'wären Tagesrätsel und Bestwerte nichts wert.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
           for (final item in shopItems)
-            _ItemTile(
-              item: item,
-              shop: shop,
-              gesperrt: item.kind == ShopKind.hints && imTagesraetsel,
-            ),
+            _ItemTile(item: item, shop: shop),
           const Divider(height: 40),
           const _PaidSection(),
           const Divider(height: 40),
@@ -129,9 +132,8 @@ class _PaidSection extends ConsumerWidget {
         Text('Mit Geld kaufen', style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
         Text(
-          'Nur Aussehen — für Geld gibt es keine Vorteile im Spiel, keine '
-          'Rettung nach dem Ende und keine anderen Teile. Die Zahlung läuft '
-          'über den App Store deines Geräts.',
+          'Die Zahlung läuft über den App Store deines Geräts. Auch hier gilt: '
+          'kein Angebot verändert die Steinfolge.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -255,20 +257,15 @@ class _PaidTile extends ConsumerWidget {
 }
 
 class _ItemTile extends ConsumerWidget {
-  const _ItemTile({
-    required this.item,
-    required this.shop,
-    required this.gesperrt,
-  });
+  const _ItemTile({required this.item, required this.shop});
 
   final ShopItem item;
   final ShopState shop;
-  final bool gesperrt;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final gekauft = item.isPermanent && shop.ownsItem(item.id);
-    final kannKaufen = !gekauft && !gesperrt && shop.canAfford(item);
+    final kannKaufen = !gekauft && shop.canAfford(item);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -287,10 +284,7 @@ class _ItemTile extends ConsumerWidget {
                           ?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
                   Text(
-                    gesperrt
-                        ? 'Im Tagesrätsel gesperrt — dort hat jede und jeder '
-                            'dieselben drei Hinweise.'
-                        : item.description,
+                    item.description,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),

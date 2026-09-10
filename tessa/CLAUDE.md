@@ -37,11 +37,22 @@ daneben die Web-App Pacer. Beide teilen keinen Code.
   stehen, ließe sich per Undo die nächste Hand abgreifen.
   **Kein Werbe-Revive**, kein Weiterspielen gegen Geld oder Werbung.
 
-## Fairness-Garantie (harte Regel, nie brechen)
+## Fairness-Garantie (harte Regel)
 
 **Die Steinsequenz wird ausschließlich aus dem Seed erzeugt.** Sie darf niemals
-von Punktzahl, Spieldauer, Gerät, Kaufhistorie oder Werbeinteraktion abhängen.
-Jeder Code, der das verletzen würde, wird abgelehnt.
+von Punktzahl, Spieldauer, Gerät oder Werbeinteraktion abhängen. Jeder Code,
+der das verletzen würde, wird abgelehnt.
+
+> **Geändert auf Wunsch des Auftraggebers.** Ursprünglich stand hier auch
+> „Kaufhistorie", und Käufe durften keinerlei Vorteile bringen. Das gilt nicht
+> mehr: Hinweise, zusätzliche Zurück-Züge und Weiterspielen nach dem Ende
+> dürfen gekauft werden — mit Sternen oder mit Geld, wie in vergleichbaren
+> Spielen üblich.
+>
+> Was bleibt, ist die Steinfolge selbst. Nicht aus Prinzip, sondern weil sonst
+> das Tagesrätsel, der Bestwert je Spielcode und das Nachspielen einer Runde
+> ihre Grundlage verlieren: Diese drei Dinge funktionieren nur, solange
+> derselbe Spielcode bei allen dieselben Teile liefert.
 
 So wird die Regel im Aufbau durchgesetzt:
 
@@ -100,23 +111,28 @@ derselbe Spielstand ergibt also immer denselben Vorschlag.
 
 ## Shop — und wo seine Grenze verläuft
 
-Der Shop verkauft **nichts für Geld**. Sterne gibt es fürs Spielen: einen je
-250 Punkte, dazu fünf fürs Tagesziel.
+Zwei Wege führen zum selben Ergebnis: **Sterne**, verdient durch Spielen
+(einer je 250 Punkte, fünf fürs Tagesziel), oder **echtes Geld** über den
+App Store.
 
-Angeboten werden ausschließlich:
+Angeboten werden:
 
-- **Farbsets** für die Teile — reine Kosmetik.
-- **Drei Hinweise** für die laufende Runde.
+- **Hinweise** — wirken sofort in der laufenden Runde, auch im Tagesrätsel.
+- **Zurück-Züge** — zusätzliche Undos für die laufende Runde.
+- **Weiterspielen** — nach dem Ende geht es mit der eigenen Punktzahl weiter;
+  Platz entsteht wie im Zen-Modus (nächste Hand aus der Steinfolge, notfalls
+  die vollste Reihe räumen).
+- **Farbsets** — Kosmetik, dauerhaft.
 
-Die Grenze ergibt sich aus der Fairness-Garantie und ist nicht verhandelbar:
+Die verbliebene Grenze, und warum sie bleibt:
 
-- Kein Angebot berührt die Steinfolge. Es gibt keine besseren Teile, keine
-  Rettung nach dem Ende, kein Weiterspielen gegen Geld oder Werbung.
-- **Im Tagesrätsel sind gekaufte Hinweise gesperrt.** Dort hat jede und jeder
-  dieselben drei — sonst wären die Ergebnisse des Tages nicht mehr
-  vergleichbar, und der Sinn eines gemeinsamen Rätsels wäre dahin.
-- `shop_test.dart` enthält einen Wächter: käme je ein Angebot dazu, das anders
-  wirkt als Aussehen oder Hinweise, schlägt er an.
+- **Kein Angebot verändert die Steinfolge.** Nicht aus Prinzip, sondern weil
+  Tagesrätsel, Bestwert je Spielcode und das Nachspielen einer Runde genau
+  davon leben, dass derselbe Spielcode bei allen dieselben Teile liefert.
+- Dauerhaft freischalten darf ein Kauf nur Aussehen; alles andere ist
+  Verbrauchsgut.
+- Zwei Wächtertests (`shop_test.dart`, `paid_purchase_test.dart`) schlagen an,
+  sobald ein Angebot anders wirkt als hier beschrieben.
 
 ### Käufe mit echtem Geld
 
