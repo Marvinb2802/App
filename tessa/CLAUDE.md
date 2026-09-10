@@ -20,13 +20,20 @@ daneben die Web-App Pacer. Beide teilen keinen Code.
   - 1 Punkt je platzierter Zelle,
   - zusätzlich `10 × L × L × Combo`, wenn in einem Zug `L` Linien gleichzeitig
     aufgelöst werden.
+  - Bewertet wird mit dem Combo-Stand **vor** dem Erhöhen: die erste Auflösung
+    nach einem Reset zählt mit Faktor 1.
 - **Combo:** steigt bei jeder Auflösung um 1, Obergrenze 9. Ein Zug ohne
-  Auflösung setzt sie auf 1 zurück.
+  Auflösung setzt sie auf 1 zurück. Sie steigt **einmal je Zug mit Auflösung,
+  nicht je Linie** — `L` geht bereits quadratisch in die Formel ein.
 - **Nachschub:** Eine neue Hand kommt erst, wenn alle drei Teile platziert sind.
 - **Game over:** wenn kein Teil der verbliebenen Hand mehr an irgendeiner Stelle
   passt.
-- **Undo:** drei pro Runde. **Kein Werbe-Revive**, kein Weiterspielen gegen Geld
-  oder Werbung.
+- **Undo:** drei pro Runde; eine Runde ist eine Partie bis zum Game over. Ein
+  Undo stellt den vorherigen Spielstand **vollständig** wieder her — Brett, Hand,
+  Punkte, Combo und Position in der Steinsequenz — und verbraucht einen der drei
+  Versuche. Die Sequenzposition mitzunehmen ist Teil der Fairness: bliebe sie
+  stehen, ließe sich per Undo die nächste Hand abgreifen.
+  **Kein Werbe-Revive**, kein Weiterspielen gegen Geld oder Werbung.
 
 ## Fairness-Garantie (harte Regel, nie brechen)
 
@@ -81,6 +88,7 @@ tessa/
 │  ├─ app.dart                     MaterialApp, Routing, Theme-Bindung
 │  ├─ domain/                      reines Dart: keine Flutter-Importe, keine I/O
 │  │  ├─ model/
+│  │  │  ├─ cell.dart              Position im Raster
 │  │  │  ├─ board.dart             8×8-Raster, unveränderlich
 │  │  │  ├─ piece.dart             Form als Menge belegter Zellen
 │  │  │  ├─ piece_catalog.dart     feste Liste aller Formen samt Gewichtung
@@ -90,7 +98,8 @@ tessa/
 │  │  │  ├─ placement.dart         Passt ein Teil an eine Position?
 │  │  │  ├─ clearing.dart          volle Reihen und Spalten finden und räumen
 │  │  │  ├─ scoring.dart           Punktformel inklusive Combo
-│  │  │  └─ game_over.dart         kein Teil der Hand passt mehr irgendwo
+│  │  │  ├─ game_over.dart         kein Teil der Hand passt mehr irgendwo
+│  │  │  └─ move.dart              ein vollständiger Zug: Regeln zusammengesetzt
 │  │  └─ generation/
 │  │     ├─ seeded_random.dart     deterministischer PRNG, fest im Code
 │  │     └─ piece_sequence.dart    hand(seed, index) — Kern der Fairness-Garantie
@@ -115,14 +124,9 @@ tessa/
    └─ widget/                      Drag-and-Drop, Darstellung
 ```
 
-## Offene Punkte
+## Stand der Umsetzung
 
-Vor der Umsetzung der Punktevergabe zu klären — hier bewusst nicht selbst
-entschieden:
-
-1. Zählt beim Bewerten eines Zuges der Combo-Stand **vor** oder **nach** dem
-   Erhöhen? (Bringt die erste Auflösung nach einem Reset den Faktor 1 oder 2?)
-2. Steigt die Combo **je Zug mit Auflösung** um 1 oder **je aufgelöster Linie**?
-   (Bei `L = 3`: +1 oder +3?)
-3. Bezieht sich „drei Undo pro Runde" auf eine Partie bis zum Game over? Nimmt
-   ein Undo auch Combo-Stand und Position in der Steinsequenz zurück?
+- `domain/` steht vollständig und ist mit `flutter test` abgedeckt: Modelle,
+  Regeln, Punkte, Game-over und die seedbasierte Erzeugung.
+- Als Nächstes: `application/` (GameController mit Zug und Undo), danach `ui/`
+  mit Drag-and-Drop, zuletzt `data/` mit sqflite.
