@@ -1,81 +1,128 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../application/game_mode.dart';
 import '../../application/providers.dart';
-import '../screens/scores_screen.dart';
+import '../theme/tessa_theme.dart';
 
-/// Punkte, Combo, Undo — und der Seed der Runde.
+/// Punkte, Combo, Undo, Hinweis — und der Spielcode der Runde.
 ///
-/// Der Seed steht bewusst sichtbar da: eine Runde soll nachspielbar und
+/// Der Code steht bewusst sichtbar da: eine Runde soll nachspielbar und
 /// ueberpruefbar sein (siehe Fairness-Garantie in CLAUDE.md).
 class ScoreBar extends ConsumerWidget {
-  const ScoreBar({super.key});
+  const ScoreBar({super.key, this.onBack});
+
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(gameControllerProvider);
+    final mode = ref.watch(gameModeProvider);
+    final hints = ref.watch(hintProvider);
     final theme = Theme.of(context);
+    final unbegrenzt = mode == GameMode.practice;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+      child: Column(
         children: [
-          // Nachgiebig, damit ein langer Seed die Leiste nicht sprengt.
-          Flexible(
-            child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          Row(
             children: [
-              Text(
-                '${state.score}',
-                key: const Key('score'),
-                style: theme.textTheme.headlineMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
+              IconButton(
+                key: const Key('back-home'),
+                icon: const Icon(Icons.arrow_back_rounded),
+                tooltip: 'Zurück zum Start',
+                onPressed: onBack ?? () => Navigator.of(context).maybePop(),
               ),
-              Text(
-                'Seed ${state.seed}',
-                key: const Key('seed'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${state.score}',
+                      key: const Key('score'),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    Text(
+                      _untertitel(mode, state.seed),
+                      key: const Key('seed'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                key: const Key('hint'),
+                icon: const Icon(Icons.lightbulb_outline_rounded),
+                tooltip: unbegrenzt
+                    ? 'Hinweis'
+                    : 'Hinweis (${hints.left} übrig)',
+                onPressed: (unbegrenzt || hints.canAsk) && !state.isOver
+                    ? () => ref.read(hintProvider.notifier).request()
+                    : null,
+              ),
+              Badge.count(
+                key: const Key('undos-left'),
+                count: unbegrenzt ? 99 : state.undosLeft,
+                isLabelVisible: !unbegrenzt,
+                child: IconButton(
+                  key: const Key('undo'),
+                  onPressed: (unbegrenzt || state.canUndo)
+                      ? () => ref.read(gameControllerProvider.notifier).undo()
+                      : null,
+                  icon: const Icon(Icons.undo_rounded),
+                  tooltip: unbegrenzt
+                      ? 'Zug zurück (unbegrenzt)'
+                      : 'Zug zurück (${state.undosLeft} übrig)',
                 ),
               ),
             ],
-            ),
           ),
-          const Spacer(),
           if (state.combo > 1)
             Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Chip(
-                key: const Key('combo'),
-                label: Text('Combo ${state.combo}'),
-                visualDensity: VisualDensity.compact,
-              ),
+              padding: const EdgeInsets.only(top: 2),
+              child: _ComboPill(combo: state.combo),
             ),
-          Badge.count(
-            key: const Key('undos-left'),
-            count: state.undosLeft,
-            child: IconButton(
-              key: const Key('undo'),
-              onPressed: state.canUndo
-                  ? () => ref.read(gameControllerProvider.notifier).undo()
-                  : null,
-              icon: const Icon(Icons.undo),
-              tooltip: 'Zug zurück (${state.undosLeft} übrig)',
-            ),
-          ),
-          IconButton(
-            key: const Key('open-scores'),
-            icon: const Icon(Icons.leaderboard_outlined),
-            tooltip: 'Bestenliste',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const ScoresScreen()),
-            ),
-          ),
         ],
+      ),
+    );
+  }
+
+  String _untertitel(GameMode mode, int seed) => switch (mode) {
+        GameMode.daily => 'Tagesrätsel · Spielcode $seed',
+        GameMode.practice => 'Tüfteln · Spielcode $seed',
+        GameMode.normal => 'Spielcode $seed',
+      };
+}
+
+class _ComboPill extends StatelessWidget {
+  const _ComboPill({required this.combo});
+
+  final int combo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      key: const Key('combo'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: tessaAccent.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        'Combo $combo',
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: tessaAccent,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

@@ -11,6 +11,10 @@ ProviderContainer containerWithSeed(int seed) => ProviderContainer.test(
     );
 
 void main() {
+  // Die Vibration spricht einen Plattformkanal an; dafuer muss die Bindung
+  // stehen, auch in reinen Dart-Tests.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('DragController', () {
     test('beginnt ohne laufenden Zug', () {
       final container = containerWithSeed(1);

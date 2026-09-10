@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../../domain/rules/placement.dart';
 import '../../domain/model/board.dart';
 import '../../domain/model/cell.dart';
 import '../../domain/model/game_state.dart';
@@ -125,6 +126,7 @@ class _BoardViewState extends ConsumerState<BoardView>
           children: [
             _grid(context),
             _clearFlash(context),
+            ..._hint(context),
             ..._preview(context),
           ],
         ),
@@ -219,6 +221,32 @@ class _BoardViewState extends ConsumerState<BoardView>
         );
       },
     );
+  }
+
+  /// Zeigt den Vorschlag des Hinweis-Knopfes als Umriss auf dem Brett.
+  List<Widget> _hint(BuildContext context) {
+    final hint = ref.watch(hintProvider).shown;
+    if (hint == null) return const [];
+    final piece = ref.watch(gameControllerProvider).hand.pieceAt(hint.slot);
+    if (piece == null) return const [];
+    final scheme = Theme.of(context).colorScheme;
+
+    return [
+      for (final cell in cellsAt(piece, hint.at.x, hint.at.y))
+        if (Board.isInside(cell.x, cell.y))
+          Positioned(
+            key: Key('hint-${cell.x}-${cell.y}'),
+            left: cell.x * widget.cellSize,
+            top: cell.y * widget.cellSize,
+            child: IgnorePointer(
+              child: CellTile(
+                size: widget.cellSize,
+                color: scheme.tertiary.withValues(alpha: 0.22),
+                border: scheme.tertiary,
+              ),
+            ),
+          ),
+    ];
   }
 
   /// Zeigt, wo das Teil landen wuerde — und faerbt einen unerlaubten Zug ein,

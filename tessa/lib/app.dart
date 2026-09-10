@@ -11,8 +11,7 @@ class TessaApp extends StatelessWidget {
     return MaterialApp(
       title: 'Tessa',
       debugShowCheckedModeBanner: false,
-      theme: tessaTheme(Brightness.light),
-      darkTheme: tessaTheme(Brightness.dark),
+      theme: tessaTheme(),
       home: const HomeScreen(),
     );
   }

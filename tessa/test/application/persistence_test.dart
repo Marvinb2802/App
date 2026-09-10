@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:tessa/application/providers.dart';
 import 'package:tessa/data/database.dart';
+import 'package:tessa/data/store.dart';
 import 'package:tessa/domain/model/board.dart';
 import 'package:tessa/domain/model/game_state.dart';
 import 'package:tessa/domain/model/hand.dart';
@@ -21,6 +22,10 @@ Future<T> eventually<T>(Future<T?> Function() read, {String? reason}) async {
 }
 
 void main() {
+  // Die Vibration spricht einen Plattformkanal an; dafuer muss die Bindung
+  // stehen, auch in reinen Dart-Tests.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUpAll(sqfliteFfiInit);
 
   Future<TessaDatabase> openMemory() => TessaDatabase.open(
@@ -36,7 +41,7 @@ void main() {
       ProviderContainer.test(
         overrides: [
           seedSourceProvider.overrideWithValue(() => seed),
-          databaseProvider.overrideWithValue(database),
+          storeProvider.overrideWithValue(SqfliteStore(database)),
           restoredGameProvider.overrideWithValue(restored),
         ],
       );

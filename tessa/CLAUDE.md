@@ -28,6 +28,8 @@ daneben die Web-App Pacer. Beide teilen keinen Code.
 - **Nachschub:** Eine neue Hand kommt erst, wenn alle drei Teile platziert sind.
 - **Game over:** wenn kein Teil der verbliebenen Hand mehr an irgendeiner Stelle
   passt.
+- **Wortwahl:** Was im Code `seed` heißt, heißt in der Oberfläche
+  **Spielcode** — verständlicher für Spielende. Im Code bleibt `seed`.
 - **Undo:** drei pro Runde; eine Runde ist eine Partie bis zum Game over. Ein
   Undo stellt den vorherigen Spielstand **vollständig** wieder her — Brett, Hand,
   Punkte, Combo und Position in der Steinsequenz — und verbraucht einen der drei
@@ -64,13 +66,32 @@ Schwierigkeit darf über die Formen im Katalog und deren Gewichtung eingestellt
 werden — aber nur seedabhängig und für alle gleich, nie reaktiv auf den Verlauf
 einer einzelnen Partie.
 
+## Spielarten
+
+- **Normale Runde:** zufälliger Spielcode.
+- **Tagesrätsel:** der Spielcode kommt aus dem Datum (10.09.2026 → 20260910).
+  Alle spielen am selben Tag dieselbe Runde. Eine Serie zählt, an wie vielen
+  Tagen in Folge gespielt wurde; ein ausgelassener Tag setzt sie zurück.
+- **Tüfteln:** derselbe Spielcode, aber **unbegrenzt zurück**. Weil der Code
+  die ganze Steinfolge festlegt, ist eine Runde ein lösbares Rätsel — dieser
+  Modus lädt ein, sie auszureizen. Das ist der eigentliche Vorteil der
+  Fairness-Garantie gegenüber Spielen mit verstecktem Zufall.
+
+**Hinweise:** drei je Runde (im Tüftel-Modus unbegrenzt). `findHint` sucht den
+Zug, der die meisten Linien auflöst, bei Gleichstand den zuerst gefundenen —
+derselbe Spielstand ergibt also immer denselben Vorschlag.
+
 ## Technik
 
 - **Flutter**, Zielgröße der App unter 60 MB. Abhängigkeiten sparsam halten;
   Größe mit `flutter build apk --analyze-size` prüfen, Auslieferung mit
   `--split-per-abi`.
 - **State:** Riverpod.
-- **Lokale Persistenz:** sqflite. **Kein Pflicht-Login**, kein Konto nötig.
+- **Lokale Persistenz:** sqflite auf dem Gerät. Wo es das nicht gibt (Browser),
+  springt `PrefsStore` über `shared_preferences` ein — beide erfüllen dieselbe
+  Schnittstelle `TessaStore`, die Oberfläche kennt den Unterschied nicht.
+  **Kein Pflicht-Login**, kein Konto nötig.
+- **Aussehen:** dunkel, ein Theme (`tessaTheme()`), kein Umschalten.
 - **Vollständig offline spielbar.** Keine Netzwerkanfrage darf für das Spielen
   erforderlich sein.
 - **Tests:** `flutter test`. Vor jedem Commit zusätzlich `flutter analyze`.
@@ -102,6 +123,7 @@ tessa/
 │  │  │  ├─ clearing.dart          volle Reihen und Spalten finden und räumen
 │  │  │  ├─ scoring.dart           Punktformel inklusive Combo
 │  │  │  ├─ game_over.dart         kein Teil der Hand passt mehr irgendwo
+│  │  │  ├─ hint.dart              sucht den besten Zug
 │  │  │  └─ move.dart              ein vollständiger Zug: Regeln zusammengesetzt
 │  │  └─ generation/
 │  │     ├─ seeded_random.dart     deterministischer PRNG, fest im Code
@@ -111,13 +133,16 @@ tessa/
 │  │  ├─ drag_controller.dart      laufender Zug: Zielzelle, Vorschau, Abbruch
 │  │  └─ providers.dart            Provider an einer Stelle, samt Seed-Quelle
 │  ├─ data/                        Persistenz
+│  │  ├─ store.dart                TessaStore: was gespeichert werden muss
+│  │  ├─ prefs_store.dart          Speicher für den Browser
 │  │  ├─ database.dart             sqflite öffnen, Schema, Migrationen
 │  │  ├─ game_dao.dart             laufende Partie sichern und laden
 │  │  ├─ score_dao.dart            Bestenliste mit Seed je Runde
 │  │  └─ settings_repository.dart  Einstellungen als Schlüssel-Wert-Paare
 │  ├─ ui/
 │  │  ├─ screens/                  home_screen (Einstieg), game_screen samt
-│  │  │                            Abschlussanzeige, scores_screen
+│  │  │                            Abschlussanzeige, scores_screen,
+│  │  │                            stats_screen (Zahlen und Einstellungen)
 │  │  ├─ widgets/                  board_view, piece_tray, piece_view,
 │  │  │                            cell_tile, score_bar, move_feedback
 │  │  └─ theme/                    Farben, Maße, Animationsdauern
@@ -166,10 +191,22 @@ tessa/
   Zellen, die im selben Zug wieder gefallen sind, springen nicht auf — sie
   gehören zum Nachleuchten. Dafür führt `MoveOutcome` die belegten Zellen mit,
   nicht nur ihre Anzahl (`placedCellCount`).
+- Zurück-Knopf in der Spielleiste, Ergebnis-Teilen über die Zwischenablage,
+  Statistik (Runden, Bestwert, Durchschnitt, Serie) und abschaltbare Vibration.
+- Noch offen: **Töne**. Dafür braucht es Klangdateien und ein Paket; das ist
+  bewusst der nächste Schritt, nicht Teil dieses Standes.
 - Tempo und Stärke beider Animationen sind nach Gefühl gesetzt und in der
   Entwicklungsumgebung von niemandem gesehen worden. Sie gehören am Gerät
   nachjustiert: `flashDuration`, `popDuration` und die beiden Faktoren in
   `_clearFlash` und `_maybePop`.
+
+`Size.fromHeight(x)` als `minimumSize` einer Schaltfläche bedeutet
+*unendliche* Mindestbreite. Das sprengt jeden Knopf, der nicht in einer
+breitenbegrenzten Spalte sitzt. Feste Mindestbreite verwenden.
+
+Reine Dart-Tests, die Vibration auslösen, brauchen
+`TestWidgetsFlutterBinding.ensureInitialized()` — sonst fehlt der
+Plattformkanal.
 
 Beim Prüfen von Animationen im Test: `Matrix4.getMaxScaleOnAxis()` nimmt die
 Z-Achse mit, die bei `Transform.scale` immer 1 bleibt — Werte unter 1 sind

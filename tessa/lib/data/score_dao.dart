@@ -56,6 +56,17 @@ class ScoreDao {
     ];
   }
 
+  /// Anzahl gespielter Runden und deren Punktsumme.
+  Future<({int rounds, int points})> totals() async {
+    final rows = await _db.rawQuery(
+        'SELECT COUNT(*) AS runden, COALESCE(SUM(score), 0) AS punkte '
+        'FROM $tableScores');
+    return (
+      rounds: (rows.first['runden'] as int?) ?? 0,
+      points: (rows.first['punkte'] as int?) ?? 0,
+    );
+  }
+
   /// Die hoechste je erreichte Punktzahl, 0 ohne gespielte Runde.
   Future<int> best() async {
     final rows = await _db.rawQuery('SELECT MAX(score) AS best FROM $tableScores');

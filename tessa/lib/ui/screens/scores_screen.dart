@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../application/game_mode.dart';
 import '../../application/providers.dart';
 import '../../data/score_dao.dart';
 
@@ -58,12 +59,13 @@ class _ScoreRow extends ConsumerWidget {
       title: Text('${entry.score} Punkte',
           style: theme.textTheme.titleMedium
               ?.copyWith(fontWeight: FontWeight.w600)),
-      subtitle: Text('Seed ${entry.seed} · ${formatDate(entry.playedAt)}'),
+      subtitle: Text('Spielcode ${entry.seed} · ${formatDate(entry.playedAt)}'),
       trailing: IconButton(
         key: Key('replay-${entry.id}'),
         icon: const Icon(Icons.replay),
         tooltip: 'Diese Runde noch einmal spielen',
         onPressed: () {
+          ref.read(gameModeProvider.notifier).set(GameMode.normal);
           ref.read(gameControllerProvider.notifier).restart(seed: entry.seed);
           Navigator.of(context).pop();
         },

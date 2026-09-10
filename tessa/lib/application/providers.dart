@@ -2,34 +2,47 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/database.dart';
 import '../data/score_dao.dart';
+import '../data/store.dart';
 import '../domain/model/game_state.dart';
 import '../domain/rules/placement.dart';
+import 'daily.dart';
 import 'drag_controller.dart';
 import 'game_controller.dart';
+import 'hint_controller.dart';
 
-/// Liefert den Seed fuer eine neue Runde.
+/// Liefert den Spielcode fuer eine neue Runde.
 typedef SeedSource = int Function();
 
-/// Woher der Seed einer Runde kommt.
+/// Woher der Spielcode einer Runde kommt.
 ///
-/// Nur die *Wahl* des Seeds ist zufaellig — die Steinsequenz selbst leitet
-/// sich danach ausschliesslich aus ihm ab (siehe CLAUDE.md). Tests ersetzen
-/// diese Quelle durch einen festen Wert.
+/// Nur die *Wahl* des Codes ist zufaellig — die Steinfolge leitet sich danach
+/// ausschliesslich aus ihm ab (siehe CLAUDE.md). Tests ersetzen diese Quelle
+/// durch einen festen Wert.
 final seedSourceProvider = Provider<SeedSource>((ref) {
   final random = Random();
   return () => random.nextInt(0x100000000);
 });
 
-/// Die geoeffnete Datenbank — oder null, wenn keine da ist.
+/// Der Speicher — oder null, wenn keiner zur Verfuegung steht.
 ///
 /// Tessa laeuft auch ohne: dann wird nur nichts gesichert. main() ersetzt
 /// diesen Wert beim Start, Tests lassen ihn null.
-final databaseProvider = Provider<TessaDatabase?>((ref) => null);
+final storeProvider = Provider<TessaStore?>((ref) => null);
 
 /// Eine beim Start geladene, noch offene Partie.
 final restoredGameProvider = Provider<GameState?>((ref) => null);
+
+/// Das heutige Datum. Als Provider, damit Tests einen festen Tag setzen koennen.
+final todayProvider = Provider<DateTime>((ref) => DateTime.now());
+
+/// Der Spielcode des heutigen Tagesraetsels.
+final dailyCodeProvider =
+    Provider<int>((ref) => codeForDate(ref.watch(todayProvider)));
+
+/// Ob das Tagesraetsel heute schon gespielt wurde, und die laufende Serie.
+final dailyStatusProvider = FutureProvider<DailyStatus>((ref) =>
+    readDailyStatus(ref.watch(storeProvider), ref.watch(todayProvider)));
 
 /// Der Spielstand der laufenden Runde.
 final gameControllerProvider =
@@ -39,19 +52,46 @@ final gameControllerProvider =
 final dragControllerProvider =
     NotifierProvider<DragController, DragState>(DragController.new);
 
-/// Die besten Runden. Ohne Datenbank bleibt die Liste leer.
+/// Hinweise: wie viele noch uebrig sind und welcher Zug gerade gezeigt wird.
+final hintProvider =
+    NotifierProvider<HintController, HintState>(HintController.new);
+
+/// Die besten Runden. Ohne Speicher bleibt die Liste leer.
 final topScoresProvider = FutureProvider<List<ScoreEntry>>((ref) async {
-  final database = ref.watch(databaseProvider);
-  if (database == null) return const [];
-  return database.scores.top();
+  final store = ref.watch(storeProvider);
+  if (store == null) return const [];
+  return store.topScores();
 });
 
 /// Die hoechste je erreichte Punktzahl.
 final bestScoreProvider = FutureProvider<int>((ref) async {
-  final database = ref.watch(databaseProvider);
-  if (database == null) return 0;
-  return database.scores.best();
+  final store = ref.watch(storeProvider);
+  if (store == null) return 0;
+  return store.bestScore();
 });
+
+/// Gespielte Runden und deren Punktsumme — Grundlage der Statistik.
+final totalsProvider = FutureProvider<({int rounds, int points})>((ref) async {
+  final store = ref.watch(storeProvider);
+  if (store == null) return (rounds: 0, points: 0);
+  return store.totals();
+});
+
+/// Ob das Geraet beim Legen kurz vibriert. main() setzt den gespeicherten Wert.
+final initialHapticsProvider = Provider<bool>((ref) => true);
+
+class HapticsController extends Notifier<bool> {
+  @override
+  bool build() => ref.read(initialHapticsProvider);
+
+  Future<void> toggle() async {
+    state = !state;
+    await ref.read(storeProvider)?.writeSetting('haptics', state ? '1' : '0');
+  }
+}
+
+final hapticsProvider =
+    NotifierProvider<HapticsController, bool>(HapticsController.new);
 
 /// Was waehrend des Ziehens auf dem Brett angezeigt wird.
 final dragPreviewProvider = Provider<DragPreview>((ref) {

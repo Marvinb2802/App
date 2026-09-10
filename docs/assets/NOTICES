@@ -4921,7 +4921,12 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------------
 flutter_lints
+path_provider_windows
 plugin_platform_interface
+shared_preferences_linux
+shared_preferences_web
+shared_preferences_windows
+xdg_directories
 
 Copyright 2013 The Flutter Authors. All rights reserved.
 
@@ -23287,6 +23292,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 listen
+path_provider_linux
+path_provider_platform_interface
+shared_preferences
+shared_preferences_android
+shared_preferences_foundation
+shared_preferences_platform_interface
 vector_math
 
 Copyright 2013 The Flutter Authors

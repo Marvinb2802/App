@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tessa/application/game_mode.dart';
 import 'package:tessa/ui/screens/game_screen.dart';
 import 'package:tessa/ui/theme/tessa_theme.dart';
 import 'package:tessa/application/game_controller.dart';
@@ -39,7 +40,7 @@ Future<ProviderContainer> pumpGame(
       // Direkt der Spielbildschirm: der Einstieg der App ist der
       // Startbildschirm, hier geht es aber um das Spiel selbst.
       child: MaterialApp(
-        theme: tessaTheme(Brightness.light),
+        theme: tessaTheme(),
         home: const GameScreen(),
       ),
     ),
@@ -75,6 +76,16 @@ GameState stateWith({
 double scaleOf(Finder finder, WidgetTester tester) =>
     tester.widget<Transform>(finder).transform.entry(0, 0);
 
+/// Tippt auf ein Bedienelement und scrollt es vorher ins Bild — die Seiten
+/// sind laenger geworden, nicht jedes Element ist von Anfang an sichtbar.
+Future<void> tapKey(WidgetTester tester, Key key) async {
+  final finder = find.byKey(key);
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   final dot = PieceCatalog.byId('dot');
   final square = PieceCatalog.byId('square2');
@@ -86,7 +97,7 @@ void main() {
     expect(find.byType(CellTile), findsAtLeast(Board.cellCount));
     expect(find.byKey(const Key('score')), findsOneWidget);
     expect(find.text('0'), findsWidgets);
-    expect(find.text('Seed 12345'), findsOneWidget);
+    expect(find.text('Spielcode 12345'), findsOneWidget);
     for (var slot = 0; slot < Hand.slotCount; slot++) {
       expect(find.byKey(Key('tray-$slot')), findsOneWidget);
     }
@@ -142,8 +153,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('tray-empty-0')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('undo')));
-    await tester.pumpAndSettle();
+    await tapKey(tester, Key('undo'));
 
     expect(container.read(gameControllerProvider).board, equals(before.board));
     expect(find.byKey(const Key('tray-0')), findsOneWidget);
@@ -163,10 +173,16 @@ void main() {
     );
 
     expect(find.byKey(const Key('game-over')), findsOneWidget);
-    expect(find.text('1234 Punkte'), findsOneWidget);
+    // Die Punktzahl steht in der Leiste und in der Abschlussanzeige.
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('game-over')),
+        matching: find.text('1234'),
+      ),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.byKey(const Key('replay')));
-    await tester.pumpAndSettle();
+    await tapKey(tester, Key('replay'));
 
     final state = container.read(gameControllerProvider);
     expect(state.isOver, isFalse, reason: 'dieselbe Runde beginnt von vorn');
@@ -256,7 +272,8 @@ void main() {
     expect(find.byKey(const Key('score')), findsOneWidget);
     expect(find.byKey(const Key('combo')), findsOneWidget);
     expect(find.byKey(const Key('undo')), findsOneWidget);
-    expect(find.byKey(const Key('open-scores')), findsOneWidget);
+    expect(find.byKey(const Key('hint')), findsOneWidget);
+    expect(find.byKey(const Key('back-home')), findsOneWidget);
     expect(find.byType(BoardView), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -454,5 +471,31 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('pop-2-2')), findsNothing);
+  });
+  group('Teilen-Text', () {
+    test('nennt beim Tagesraetsel die Serie', () {
+      final text = shareText(
+        mode: GameMode.daily,
+        score: 3210,
+        seed: 20260910,
+        streak: 4,
+      );
+      expect(text, contains('Tessa Tagesrätsel'));
+      expect(text, contains('3210 Punkte'));
+      expect(text, contains('Serie 4 Tage'));
+      expect(text, contains('Spielcode 20260910'));
+    });
+
+    test('laesst die Serie weg, wenn es keine gibt', () {
+      final text = shareText(
+        mode: GameMode.normal,
+        score: 900,
+        seed: 77,
+        streak: 0,
+      );
+      expect(text, contains('900 Punkte'));
+      expect(text, isNot(contains('Serie')));
+      expect(text, contains('Spielcode 77'));
+    });
   });
 }

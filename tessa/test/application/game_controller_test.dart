@@ -18,6 +18,10 @@ bool playFirstFit(GameController controller, GameState state) {
 }
 
 void main() {
+  // Die Vibration spricht einen Plattformkanal an; dafuer muss die Bindung
+  // stehen, auch in reinen Dart-Tests.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('GameController', () {
     test('startet mit dem Seed aus der Quelle', () {
       final container = containerWithSeed(4242);
