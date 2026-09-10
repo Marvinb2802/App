@@ -56,6 +56,9 @@ So wird die Regel im Aufbau durchgesetzt:
   einen festen Seed fest, damit unbeabsichtigte Änderungen auffallen.
 - Der Seed einer Runde wird gespeichert und ist im Spiel einsehbar, damit eine
   Runde nachspielbar und überprüfbar ist.
+- Nur die *Wahl* des Seeds darf zufällig sein (`seedSourceProvider`). Sobald er
+  feststeht, folgt die ganze Runde aus ihm — das ist kein Widerspruch zur
+  Garantie, sondern ihre Voraussetzung.
 
 Schwierigkeit darf über die Formen im Katalog und deren Gewichtung eingestellt
 werden — aber nur seedabhängig und für alle gleich, nie reaktiv auf den Verlauf
@@ -106,7 +109,7 @@ tessa/
 │  ├─ application/                 Riverpod: Zustand und Abläufe
 │  │  ├─ game_controller.dart      Zug ausführen, Undo, neue Runde
 │  │  ├─ drag_controller.dart      laufender Zug: Zielzelle, Vorschau, Abbruch
-│  │  └─ providers.dart            alle Provider-Definitionen an einer Stelle
+│  │  └─ providers.dart            Provider an einer Stelle, samt Seed-Quelle
 │  ├─ data/                        Persistenz
 │  │  ├─ database.dart             sqflite öffnen, Migrationen
 │  │  ├─ game_dao.dart             laufende Partie sichern und laden
@@ -128,5 +131,7 @@ tessa/
 
 - `domain/` steht vollständig und ist mit `flutter test` abgedeckt: Modelle,
   Regeln, Punkte, Game-over und die seedbasierte Erzeugung.
-- Als Nächstes: `application/` (GameController mit Zug und Undo), danach `ui/`
-  mit Drag-and-Drop, zuletzt `data/` mit sqflite.
+- `application/` steht: `GameController` (Zug, Undo, Neustart, Replay mit
+  demselben Seed) und `DragController` samt Vorschau. Die Seed-Quelle ist ein
+  Provider und in Tests durch einen festen Wert ersetzbar.
+- Als Nächstes: `ui/` mit Brett und Drag-and-Drop, danach `data/` mit sqflite.
