@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../../application/sound.dart';
+import '../format.dart';
 
 /// Zahlen zur eigenen Spielweise, dazu die Einstellungen.
 class StatsScreen extends ConsumerWidget {
@@ -13,6 +15,7 @@ class StatsScreen extends ConsumerWidget {
     final best = ref.watch(bestScoreProvider).value ?? 0;
     final daily = ref.watch(dailyStatusProvider).value;
     final haptics = ref.watch(hapticsProvider);
+    final sound = ref.watch(soundProvider);
     final schnitt =
         totals.rounds == 0 ? 0 : (totals.points / totals.rounds).round();
 
@@ -24,17 +27,17 @@ class StatsScreen extends ConsumerWidget {
           _Zeile(
             key: const Key('stat-rounds'),
             label: 'Gespielte Runden',
-            value: '${totals.rounds}',
+            value: zahl(totals.rounds),
           ),
           _Zeile(
             key: const Key('stat-best'),
             label: 'Beste Runde',
-            value: '$best',
+            value: zahl(best),
           ),
           _Zeile(
             key: const Key('stat-average'),
             label: 'Durchschnitt',
-            value: '$schnitt',
+            value: zahl(schnitt),
           ),
           _Zeile(
             key: const Key('stat-streak'),
@@ -42,6 +45,14 @@ class StatsScreen extends ConsumerWidget {
             value: '${daily?.streak ?? 0}',
           ),
           const Divider(height: 40),
+          SwitchListTile(
+            key: const Key('sound-switch'),
+            title: const Text('Töne'),
+            subtitle: const Text('Beim Auflösen steigt die Tonhöhe mit der '
+                'Combo'),
+            value: sound,
+            onChanged: (_) => ref.read(soundProvider.notifier).toggle(),
+          ),
           SwitchListTile(
             key: const Key('haptics-switch'),
             title: const Text('Vibration'),

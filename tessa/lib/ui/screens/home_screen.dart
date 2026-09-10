@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/game_mode.dart';
 import '../../application/providers.dart';
+import '../format.dart';
 import '../theme/tessa_theme.dart';
 import 'game_screen.dart';
 import 'scores_screen.dart';
@@ -50,7 +51,7 @@ class HomeScreen extends ConsumerWidget {
                   if (best > 0) ...[
                     const SizedBox(height: 12),
                     Text(
-                      'Bestpunktzahl $best',
+                      'Bestpunktzahl ${zahl(best)}',
                       key: const Key('best-score'),
                       textAlign: TextAlign.center,
                       style: theme.textTheme.titleSmall?.copyWith(
@@ -73,7 +74,7 @@ class HomeScreen extends ConsumerWidget {
                     FilledButton(
                       key: const Key('continue'),
                       onPressed: () => _open(context),
-                      child: Text('Weiterspielen (${state.score} Punkte)'),
+                      child: Text('Weiterspielen (${zahl(state.score)} Punkte)'),
                     ),
                     const SizedBox(height: 10),
                   ],

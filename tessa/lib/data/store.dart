@@ -20,6 +20,9 @@ abstract class TessaStore {
   Future<List<ScoreEntry>> topScores({int limit = 10});
   Future<int> bestScore();
 
+  /// Der beste Wert, der mit genau diesem Spielcode erreicht wurde.
+  Future<int> bestForSeed(int seed);
+
   /// Anzahl gespielter Runden und deren Punktsumme — fuer den Durchschnitt.
   Future<({int rounds, int points})> totals();
 
@@ -58,6 +61,9 @@ class SqfliteStore implements TessaStore {
 
   @override
   Future<int> bestScore() => database.scores.best();
+
+  @override
+  Future<int> bestForSeed(int seed) => database.scores.bestForSeed(seed);
 
   @override
   Future<({int rounds, int points})> totals() => database.scores.totals();

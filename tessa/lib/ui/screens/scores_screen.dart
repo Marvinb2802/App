@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/game_mode.dart';
 import '../../application/providers.dart';
 import '../../data/score_dao.dart';
+import '../format.dart';
 
 /// Tag, Monat und Jahr — ohne zusaetzliches Paket.
 String formatDate(DateTime date) {
@@ -56,7 +57,7 @@ class _ScoreRow extends ConsumerWidget {
     final theme = Theme.of(context);
     return ListTile(
       leading: CircleAvatar(child: Text('$rank')),
-      title: Text('${entry.score} Punkte',
+      title: Text('${zahl(entry.score)} Punkte',
           style: theme.textTheme.titleMedium
               ?.copyWith(fontWeight: FontWeight.w600)),
       subtitle: Text('Spielcode ${entry.seed} · ${formatDate(entry.playedAt)}'),

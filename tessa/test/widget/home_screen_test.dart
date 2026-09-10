@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tessa/application/sound.dart';
+
+import '../support/fake_sound.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:tessa/app.dart';
 import 'package:tessa/application/providers.dart';
@@ -44,6 +47,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          soundOutputProvider.overrideWithValue(RecordingOutput()),
           seedSourceProvider.overrideWithValue(() => seed),
           restoredGameProvider.overrideWithValue(restored),
           storeProvider.overrideWithValue(database == null ? null : SqfliteStore(database)),
@@ -127,7 +131,7 @@ void main() {
     addTearDown(gefuellt.close);
     await gefuellt.scores.add(score: 8400, seed: 5);
     await pumpHome(tester, database: gefuellt);
-    expect(find.text('Bestpunktzahl 8400'), findsOneWidget);
+    expect(find.text('Bestpunktzahl 8.400'), findsOneWidget);
   });
 
   testWidgets('die Bestenliste ist vom Start aus erreichbar', (tester) async {

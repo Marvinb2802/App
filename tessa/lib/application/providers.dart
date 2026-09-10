@@ -70,6 +70,15 @@ final bestScoreProvider = FutureProvider<int>((ref) async {
   return store.bestScore();
 });
 
+/// Der beste Wert zu einem bestimmten Spielcode — die Messlatte beim
+/// Nachspielen und beim Tuefteln.
+final bestForCodeProvider =
+    FutureProvider.family<int, int>((ref, seed) async {
+  final store = ref.watch(storeProvider);
+  if (store == null) return 0;
+  return store.bestForSeed(seed);
+});
+
 /// Gespielte Runden und deren Punktsumme — Grundlage der Statistik.
 final totalsProvider = FutureProvider<({int rounds, int points})>((ref) async {
   final store = ref.watch(storeProvider);

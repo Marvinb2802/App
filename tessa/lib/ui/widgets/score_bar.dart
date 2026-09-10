@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/game_mode.dart';
 import '../../application/providers.dart';
+import '../format.dart';
 import '../theme/tessa_theme.dart';
 
 /// Punkte, Combo, Undo, Hinweis — und der Spielcode der Runde.
@@ -39,7 +40,7 @@ class ScoreBar extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      '${state.score}',
+                      zahl(state.score),
                       key: const Key('score'),
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -85,11 +86,15 @@ class ScoreBar extends ConsumerWidget {
               ),
             ],
           ),
-          if (state.combo > 1)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: _ComboPill(combo: state.combo),
-            ),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              if (state.combo > 1) _ComboPill(combo: state.combo),
+              _BestPill(seed: state.seed, score: state.score),
+            ],
+          ),
         ],
       ),
     );
@@ -100,6 +105,43 @@ class ScoreBar extends ConsumerWidget {
         GameMode.practice => 'Tüfteln · Spielcode $seed',
         GameMode.normal => 'Spielcode $seed',
       };
+}
+
+/// Zeigt die eigene Bestleistung mit genau diesem Spielcode — die Messlatte
+/// beim Nachspielen und beim Tuefteln.
+class _BestPill extends ConsumerWidget {
+  const _BestPill({required this.seed, required this.score});
+
+  final int seed;
+  final int score;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final best = ref.watch(bestForCodeProvider(seed)).value ?? 0;
+    if (best == 0) return const SizedBox.shrink();
+
+    final voraus = score > best;
+    final text = voraus
+        ? 'Bestwert übertroffen +${zahl(score - best)}'
+        : 'Bestwert ${zahl(best)} · noch ${zahl(best - score)}';
+    final farbe = voraus ? const Color(0xFF3DD6A0) : Colors.white70;
+
+    return Container(
+      key: const Key('best-for-code'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: farbe.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: farbe,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
 }
 
 class _ComboPill extends StatelessWidget {

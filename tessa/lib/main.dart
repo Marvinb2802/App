@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'application/providers.dart';
+import 'application/sound.dart';
 import 'data/database.dart';
 import 'data/prefs_store.dart';
 import 'data/store.dart';
@@ -26,10 +27,12 @@ Future<void> main() async {
 
   GameState? restored;
   var haptics = true;
+  var sound = true;
   if (store != null) {
     try {
       restored = await store.loadGame();
       haptics = await store.readSetting('haptics') != '0';
+      sound = await store.readSetting('sound') != '0';
     } catch (_) {
       restored = null;
     }
@@ -41,6 +44,7 @@ Future<void> main() async {
         storeProvider.overrideWithValue(store),
         restoredGameProvider.overrideWithValue(restored),
         initialHapticsProvider.overrideWithValue(haptics),
+        initialSoundProvider.overrideWithValue(sound),
       ],
       child: const TessaApp(),
     ),

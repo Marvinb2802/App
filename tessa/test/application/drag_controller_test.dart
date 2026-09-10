@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tessa/application/sound.dart';
+
+import '../support/fake_sound.dart';
 import 'package:tessa/application/providers.dart';
 import 'package:tessa/domain/model/board.dart';
 import 'package:tessa/domain/model/cell.dart';
@@ -7,7 +10,7 @@ import 'package:tessa/domain/model/hand.dart';
 import 'package:tessa/domain/rules/placement.dart';
 
 ProviderContainer containerWithSeed(int seed) => ProviderContainer.test(
-      overrides: [seedSourceProvider.overrideWithValue(() => seed)],
+      overrides: [soundOutputProvider.overrideWithValue(RecordingOutput()), seedSourceProvider.overrideWithValue(() => seed)],
     );
 
 void main() {

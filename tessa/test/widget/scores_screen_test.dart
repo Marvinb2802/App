@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tessa/application/sound.dart';
+
+import '../support/fake_sound.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:tessa/ui/theme/tessa_theme.dart';
 import 'package:tessa/application/providers.dart';
@@ -25,6 +28,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          soundOutputProvider.overrideWithValue(RecordingOutput()),
           seedSourceProvider.overrideWithValue(() => 2024),
           storeProvider.overrideWithValue(database == null ? null : SqfliteStore(database)),
         ],
@@ -63,13 +67,13 @@ void main() {
 
     await pumpApp(tester, database: database);
     expect(find.byKey(const Key('scores-list')), findsOneWidget);
-    expect(find.text('4300 Punkte'), findsOneWidget);
+    expect(find.text('4.300 Punkte'), findsOneWidget);
     expect(find.text('Spielcode 22 · 01.09.2026'), findsOneWidget);
     expect(find.text('120 Punkte'), findsOneWidget);
     expect(find.text('Spielcode 11 · 07.03.2026'), findsOneWidget);
 
     // Beste zuerst.
-    final erste = tester.getTopLeft(find.text('4300 Punkte'));
+    final erste = tester.getTopLeft(find.text('4.300 Punkte'));
     final zweite = tester.getTopLeft(find.text('120 Punkte'));
     expect(erste.dy, lessThan(zweite.dy));
   });
@@ -108,6 +112,6 @@ void main() {
     container.invalidate(topScoresProvider);
     await tester.pumpAndSettle();
 
-    expect(find.text('7000 Punkte'), findsOneWidget);
+    expect(find.text('7.000 Punkte'), findsOneWidget);
   });
 }

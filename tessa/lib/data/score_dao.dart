@@ -56,6 +56,13 @@ class ScoreDao {
     ];
   }
 
+  /// Der beste Wert zu genau diesem Spielcode, 0 wenn noch nie gespielt.
+  Future<int> bestForSeed(int seed) async {
+    final rows = await _db.rawQuery(
+        'SELECT MAX(score) AS best FROM $tableScores WHERE seed = ?', [seed]);
+    return (rows.first['best'] as int?) ?? 0;
+  }
+
   /// Anzahl gespielter Runden und deren Punktsumme.
   Future<({int rounds, int points})> totals() async {
     final rows = await _db.rawQuery(

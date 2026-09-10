@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tessa/application/sound.dart';
+
+import '../support/fake_sound.dart';
 import 'package:tessa/application/game_mode.dart';
 import 'package:tessa/ui/screens/game_screen.dart';
 import 'package:tessa/ui/theme/tessa_theme.dart';
@@ -33,6 +36,7 @@ Future<ProviderContainer> pumpGame(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+          soundOutputProvider.overrideWithValue(RecordingOutput()),
         seedSourceProvider.overrideWithValue(() => seed),
         if (state != null)
           gameControllerProvider.overrideWith(() => FixedGame(state)),
@@ -177,7 +181,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('game-over')),
-        matching: find.text('1234'),
+        matching: find.text('1.234'),
       ),
       findsOneWidget,
     );
@@ -497,5 +501,43 @@ void main() {
       expect(text, isNot(contains('Serie')));
       expect(text, contains('Spielcode 77'));
     });
+  });
+  testWidgets('ohne frueheren Versuch steht kein Bestwert da', (tester) async {
+    await pumpGame(
+      tester,
+      state: stateWith(
+        board: Board.empty(),
+        hand: Hand.of([dot, dot, dot]),
+        seed: 555,
+      ),
+    );
+    expect(find.byKey(const Key('best-for-code')), findsNothing);
+  });
+
+  testWidgets('zeigt den Abstand zum eigenen Bestwert dieses Spielcodes',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          soundOutputProvider.overrideWithValue(RecordingOutput()),
+          seedSourceProvider.overrideWithValue(() => 555),
+          gameControllerProvider.overrideWith(() => FixedGame(stateWith(
+                board: Board.empty(),
+                hand: Hand.of([dot, dot, dot]),
+                seed: 555,
+                score: 400,
+              ))),
+          bestForCodeProvider(555).overrideWith((ref) async => 1000),
+        ],
+        child: MaterialApp(
+          theme: tessaTheme(),
+          home: const GameScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('best-for-code')), findsOneWidget);
+    expect(find.textContaining('noch 600'), findsOneWidget);
   });
 }

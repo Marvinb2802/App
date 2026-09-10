@@ -132,6 +132,15 @@ class PrefsStore implements TessaStore {
   }
 
   @override
+  Future<int> bestForSeed(int seed) async {
+    final passend = _scores().where((entry) => entry['seed'] == seed);
+    if (passend.isEmpty) return 0;
+    return passend
+        .map((entry) => entry['score'] as int)
+        .reduce((a, b) => a > b ? a : b);
+  }
+
+  @override
   Future<({int rounds, int points})> totals() async {
     final entries = _scores();
     return (

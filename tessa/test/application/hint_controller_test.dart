@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tessa/application/sound.dart';
+
+import '../support/fake_sound.dart';
 import 'package:tessa/application/game_mode.dart';
 import 'package:tessa/application/hint_controller.dart';
 import 'package:tessa/application/providers.dart';
@@ -9,7 +12,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   ProviderContainer container({int seed = 2024}) => ProviderContainer.test(
-        overrides: [seedSourceProvider.overrideWithValue(() => seed)],
+        overrides: [soundOutputProvider.overrideWithValue(RecordingOutput()), seedSourceProvider.overrideWithValue(() => seed)],
       );
 
   test('drei Hinweise je Runde', () {

@@ -77,6 +77,11 @@ einer einzelnen Partie.
   Modus lädt ein, sie auszureizen. Das ist der eigentliche Vorteil der
   Fairness-Garantie gegenüber Spielen mit verstecktem Zufall.
 
+**Bestwert je Spielcode:** Zu jedem Code wird die eigene beste Runde
+festgehalten. Beim Spielen steht der Abstand dazu in der Leiste („noch 600"),
+und wer ihn überbietet, sieht es sofort. Erst das macht Tüfteln und das
+Nachspielen messbar — bei zufälliger Steinfolge wäre so ein Vergleich sinnlos.
+
 **Hinweise:** drei je Runde (im Tüftel-Modus unbegrenzt). `findHint` sucht den
 Zug, der die meisten Linien auflöst, bei Gleichstand den zuerst gefundenen —
 derselbe Spielstand ergibt also immer denselben Vorschlag.
@@ -193,8 +198,12 @@ tessa/
   nicht nur ihre Anzahl (`placedCellCount`).
 - Zurück-Knopf in der Spielleiste, Ergebnis-Teilen über die Zwischenablage,
   Statistik (Runden, Bestwert, Durchschnitt, Serie) und abschaltbare Vibration.
-- Noch offen: **Töne**. Dafür braucht es Klangdateien und ein Paket; das ist
-  bewusst der nächste Schritt, nicht Teil dieses Standes.
+- **Töne:** `assets/sounds/` wird von `tool/`-freiem Python-Skript erzeugt
+  (siehe Commit) — reine Sinus-Klänge, zusammen rund 134 KB. Beim Auflösen
+  steigt die Tonhöhe mit der Combo über eine pentatonische Leiter; abschaltbar
+  wie die Vibration.
+  `SoundOutput` trennt das Abspielen vom Rest, damit Tests prüfen können,
+  *welcher* Klang zu welchem Zug gehört, ohne etwas abzuspielen.
 - Tempo und Stärke beider Animationen sind nach Gefühl gesetzt und in der
   Entwicklungsumgebung von niemandem gesehen worden. Sie gehören am Gerät
   nachjustiert: `flashDuration`, `popDuration` und die beiden Faktoren in
@@ -203,6 +212,10 @@ tessa/
 `Size.fromHeight(x)` als `minimumSize` einer Schaltfläche bedeutet
 *unendliche* Mindestbreite. Das sprengt jeden Knopf, der nicht in einer
 breitenbegrenzten Spalte sitzt. Feste Mindestbreite verwenden.
+
+Tests dürfen `AudioPlayer` nicht anlegen — ohne Plugin wirft das eine
+Ausnahme, die kein `catchError` mehr auffängt. Deshalb überschreibt jeder Test
+`soundOutputProvider` mit `RecordingOutput` aus `test/support/`.
 
 Reine Dart-Tests, die Vibration auslösen, brauchen
 `TestWidgetsFlutterBinding.ensureInitialized()` — sonst fehlt der

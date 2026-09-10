@@ -10,6 +10,7 @@ import '../../domain/model/board.dart';
 import '../widgets/board_view.dart';
 import '../widgets/move_feedback.dart';
 import '../widgets/piece_tray.dart';
+import '../format.dart';
 import '../widgets/score_bar.dart';
 import 'scores_screen.dart';
 
@@ -75,6 +76,7 @@ class _GameOverOverlay extends ConsumerWidget {
     final mode = ref.watch(gameModeProvider);
     final streak = ref.watch(dailyStatusProvider).value?.streak ?? 0;
     final best = ref.watch(bestScoreProvider).value ?? 0;
+    final codeBest = ref.watch(bestForCodeProvider(state.seed)).value ?? 0;
     final controller = ref.read(gameControllerProvider.notifier);
     final theme = Theme.of(context);
     final rekord = state.score >= best && state.score > 0;
@@ -101,7 +103,7 @@ class _GameOverOverlay extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      '${state.score}',
+                      zahl(state.score),
                       textAlign: TextAlign.center,
                       style: theme.textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -119,6 +121,21 @@ class _GameOverOverlay extends ConsumerWidget {
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
+                    if (codeBest > 0) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        state.score >= codeBest
+                            ? 'Neuer Bestwert für diesen Spielcode'
+                            : 'Dein Bestwert mit diesem Code: ${zahl(codeBest)}',
+                        key: const Key('code-best'),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: state.score >= codeBest
+                              ? const Color(0xFF3DD6A0)
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                     if (mode == GameMode.daily && streak > 0) ...[
                       const SizedBox(height: 8),
                       Text('Serie: $streak Tage',

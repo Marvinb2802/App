@@ -7,6 +7,7 @@ import '../domain/model/game_state.dart';
 import '../domain/rules/move.dart';
 import 'daily.dart';
 import 'game_mode.dart';
+import 'sound.dart';
 import 'providers.dart';
 
 /// Fuehrt die Runde: Zuege, Undo, Neustart.
@@ -37,7 +38,7 @@ class GameController extends Notifier<GameState> {
     _remember(state);
     state = applyMove(state, slot: slot, x: x, y: y);
     ref.read(hintProvider.notifier).hide();
-    _rumble(state.lastMove?.didClear ?? false);
+    _feedback(state);
     unawaited(_persist(state));
     return true;
   }
@@ -66,7 +67,19 @@ class GameController extends Notifier<GameState> {
   /// Spielt dieselbe Runde noch einmal: gleicher Code, gleiche Steinfolge.
   void replay() => restart(seed: state.seed);
 
-  void _rumble(bool cleared) {
+  /// Ton und Vibration zum Zug.
+  void _feedback(GameState after) {
+    final cleared = after.lastMove?.didClear ?? false;
+    final sound = ref.read(soundProvider.notifier);
+
+    if (after.isOver) {
+      sound.play(Sounds.gameOver);
+    } else if (cleared) {
+      sound.play(Sounds.clear(after.lastMove!.appliedCombo));
+    } else {
+      sound.play(Sounds.place);
+    }
+
     if (!ref.read(hapticsProvider)) return;
     if (cleared) {
       HapticFeedback.mediumImpact();
@@ -103,6 +116,7 @@ class GameController extends Notifier<GameState> {
         ref.invalidate(dailyStatusProvider);
       }
       ref.invalidate(topScoresProvider);
+      ref.invalidate(bestForCodeProvider(snapshot.seed));
       ref.invalidate(bestScoreProvider);
       ref.invalidate(totalsProvider);
     } catch (_) {

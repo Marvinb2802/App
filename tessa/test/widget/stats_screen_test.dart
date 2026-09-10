@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tessa/application/sound.dart';
+
+import '../support/fake_sound.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tessa/application/daily.dart';
 import 'package:tessa/application/providers.dart';
@@ -24,6 +27,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          soundOutputProvider.overrideWithValue(RecordingOutput()),
           storeProvider.overrideWithValue(store),
           if (today != null) todayProvider.overrideWithValue(today),
         ],

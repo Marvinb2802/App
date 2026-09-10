@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tessa/application/sound.dart';
+
+import '../support/fake_sound.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:tessa/application/providers.dart';
 import 'package:tessa/data/database.dart';
@@ -40,6 +43,7 @@ void main() {
   }) =>
       ProviderContainer.test(
         overrides: [
+          soundOutputProvider.overrideWithValue(RecordingOutput()),
           seedSourceProvider.overrideWithValue(() => seed),
           storeProvider.overrideWithValue(SqfliteStore(database)),
           restoredGameProvider.overrideWithValue(restored),
@@ -153,7 +157,7 @@ void main() {
 
   test('ohne Datenbank laeuft das Spiel weiter', () {
     final container = ProviderContainer.test(
-      overrides: [seedSourceProvider.overrideWithValue(() => 7)],
+      overrides: [soundOutputProvider.overrideWithValue(RecordingOutput()), seedSourceProvider.overrideWithValue(() => 7)],
     );
     final controller = container.read(gameControllerProvider.notifier);
     final before = container.read(gameControllerProvider);

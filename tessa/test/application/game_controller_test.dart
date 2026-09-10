@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tessa/application/sound.dart';
+
+import '../support/fake_sound.dart';
 import 'package:tessa/application/game_controller.dart';
 import 'package:tessa/application/providers.dart';
 import 'package:tessa/domain/generation/piece_sequence.dart';
@@ -7,7 +10,7 @@ import 'package:tessa/domain/model/game_state.dart';
 import 'package:tessa/domain/rules/placement.dart';
 
 ProviderContainer containerWithSeed(int seed) => ProviderContainer.test(
-      overrides: [seedSourceProvider.overrideWithValue(() => seed)],
+      overrides: [soundOutputProvider.overrideWithValue(RecordingOutput()), seedSourceProvider.overrideWithValue(() => seed)],
     );
 
 /// Legt das erste noch vorhandene Teil auf den ersten passenden Platz.
@@ -115,7 +118,7 @@ void main() {
     test('restart beginnt eine neue Runde und leert den Verlauf', () {
       var seed = 10;
       final container = ProviderContainer.test(
-        overrides: [seedSourceProvider.overrideWithValue(() => seed)],
+        overrides: [soundOutputProvider.overrideWithValue(RecordingOutput()), seedSourceProvider.overrideWithValue(() => seed)],
       );
       final controller = container.read(gameControllerProvider.notifier);
 
