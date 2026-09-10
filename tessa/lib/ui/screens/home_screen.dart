@@ -7,6 +7,7 @@ import '../../application/providers.dart';
 import '../format.dart';
 import '../theme/tessa_theme.dart';
 import 'game_screen.dart';
+import 'levels_screen.dart';
 import 'scores_screen.dart';
 import 'shop_screen.dart';
 import 'stats_screen.dart';
@@ -20,6 +21,7 @@ class HomeScreen extends ConsumerWidget {
     final state = ref.watch(gameControllerProvider);
     final best = ref.watch(bestScoreProvider).value ?? 0;
     final daily = ref.watch(dailyStatusProvider).value;
+    final geschaffteLevel = ref.watch(levelProgressProvider).value ?? 0;
     final theme = Theme.of(context);
 
     // Eine Runde laeuft, wenn schon etwas auf dem Brett steht.
@@ -86,6 +88,20 @@ class HomeScreen extends ConsumerWidget {
                     key: const Key('new-game'),
                     onPressed: () => _start(context, ref, GameMode.normal),
                     child: const Text('Neue Runde'),
+                  ),
+                  const SizedBox(height: 10),
+                  FilledButton(
+                    key: const Key('levels'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LevelsScreen(),
+                      ),
+                    ),
+                    child: Text(
+                      geschaffteLevel == 0
+                          ? 'Level spielen'
+                          : 'Level $geschaffteLevel geschafft — weiter',
+                    ),
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton(

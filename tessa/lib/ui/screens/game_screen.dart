@@ -5,9 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/game_mode.dart';
+import '../../application/level_controller.dart';
 import '../../application/providers.dart';
 import '../../domain/model/board.dart';
 import '../widgets/board_view.dart';
+import '../../domain/model/level.dart';
+import '../widgets/level_banner.dart';
 import '../widgets/move_feedback.dart';
 import '../widgets/piece_tray.dart';
 import '../../application/round_log.dart';
@@ -23,6 +26,8 @@ class GameScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isOver = ref.watch(gameControllerProvider).isOver;
+    final imLevel = ref.watch(gameModeProvider) == GameMode.level;
+    final session = ref.watch(levelProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -39,7 +44,7 @@ class GameScreen extends ConsumerWidget {
                 Column(
                   children: [
                     const ScoreBar(),
-                    const MoveFeedback(),
+                    if (imLevel) const LevelBanner() else const MoveFeedback(),
                     Expanded(
                       child: Center(child: BoardView(cellSize: cellSize)),
                     ),
@@ -47,10 +52,95 @@ class GameScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                   ],
                 ),
-                if (isOver) const _GameOverOverlay(),
+                if (imLevel && session.outcome != LevelOutcome.playing)
+                  _LevelOverlay(session: session)
+                else if (isOver && !imLevel)
+                  const _GameOverOverlay(),
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Der Abschluss eines Levels — geschafft oder nicht.
+class _LevelOverlay extends ConsumerWidget {
+  const _LevelOverlay({required this.session});
+
+  final LevelSession session;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final level = session.level!;
+    final gewonnen = session.outcome == LevelOutcome.won;
+    final state = ref.watch(gameControllerProvider);
+    final theme = Theme.of(context);
+
+    return Positioned.fill(
+      key: const Key('level-over'),
+      child: ColoredBox(
+        color: Colors.black.withValues(alpha: 0.72),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Card(
+              margin: const EdgeInsets.all(24),
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      gewonnen
+                          ? 'Level ${level.number} geschafft'
+                          : 'Ziel nicht erreicht',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      gewonnen
+                          ? '${zahl(state.score)} Punkte · '
+                              '+${3 + level.number ~/ 10} ★'
+                          : level.goal.text,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: gewonnen
+                            ? const Color(0xFF3DD6A0)
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    if (gewonnen)
+                      FilledButton(
+                        key: const Key('next-level'),
+                        onPressed: () => ref
+                            .read(gameControllerProvider.notifier)
+                            .startLevel(levelFor(level.number + 1)),
+                        child: const Text('Nächstes Level'),
+                      )
+                    else
+                      FilledButton(
+                        key: const Key('retry-level'),
+                        onPressed: () => ref
+                            .read(gameControllerProvider.notifier)
+                            .startLevel(level),
+                        child: const Text('Noch einmal'),
+                      ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      key: const Key('back-to-levels'),
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      child: const Text('Zur Übersicht'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

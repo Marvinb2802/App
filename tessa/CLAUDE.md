@@ -83,6 +83,10 @@ einer einzelnen Partie.
 - **Tagesrätsel:** der Spielcode kommt aus dem Datum (10.09.2026 → 20260910).
   Alle spielen am selben Tag dieselbe Runde. Eine Serie zählt, an wie vielen
   Tagen in Folge gespielt wurde; ein ausgelassener Tag setzt sie zurück.
+- **Level:** beliebig viele, jedes mit eigenem Spielcode, eigenem Ziel, teils
+  vorbelegtem Brett und begrenzten Zügen. Alles hängt allein an der Nummer
+  (`domain/model/level.dart`), es gibt also keine Liste zu pflegen. Die Kurve
+  steht in `LevelTuning` an einer Stelle.
 - **Zen:** kein Spielende. Geht nichts mehr, kommt die nächste Hand *aus der
   Steinfolge*; hilft auch das nicht, wird die vollste Reihe geräumt. Es wird
   nie neu gewürfelt, und die Rettung gibt keine Punkte.
@@ -90,6 +94,23 @@ einer einzelnen Partie.
   die ganze Steinfolge festlegt, ist eine Runde ein lösbares Rätsel — dieser
   Modus lädt ein, sie auszureizen. Das ist der eigentliche Vorteil der
   Fairness-Garantie gegenüber Spielen mit verstecktem Zufall.
+
+**Schwierigkeit der Level — an gemessenem Spiel geeicht.** `level_test.dart`
+lässt einen Automaten jedes Level spielen: er nimmt den Zug, der die meisten
+Linien räumt, und hält bei Gleichstand das Brett offen. In rund 30 Zügen holt
+er etwa 250 Punkte, 11 Linien und Combo 3–5 — daran sind die Ziele bemessen,
+nicht an Schätzung. Die Tests halten fest: die ersten 25 Level lassen sich
+durchspielen, ab Level 60 scheitert der Automat regelmäßig, und höchstens 5 von
+120 Leveln fahren sich früh fest (gemessen: 3).
+
+Was der Automat nicht kann: vorausschauende Ziele wie „zwei Linien in einem
+Zug" plant er nie, weil er sofort räumt. Für die gilt eine schwächere Zusage —
+er muss dem Ziel bis auf eine Linie nahekommen.
+
+Die Vorbelegung wächst als **nahezu volle Reihen von unten**. Zwei frühere
+Varianten waren messbar schlechter: verstreute Einzelzellen und ein loser
+Sockel führten bei späten Leveln nach vier Zügen zum Ende — nicht schwer,
+sondern unfair.
 
 **Tagesziel:** Zusätzlich zur Punktjagd stellt jeder Tag eine Aufgabe (Linien
 in einem Zug, Combo-Stand, Punktzahl). Die Auswahl hängt allein vom Datum ab,

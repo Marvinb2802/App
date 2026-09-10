@@ -67,6 +67,13 @@ final dragControllerProvider =
 final hintProvider =
     NotifierProvider<HintController, HintState>(HintController.new);
 
+/// Das hoechste geschaffte Level.
+final levelProgressProvider = FutureProvider<int>((ref) async {
+  final store = ref.watch(storeProvider);
+  if (store == null) return 0;
+  return int.tryParse(await store.readSetting('levels.done') ?? '') ?? 0;
+});
+
 /// Der Verlauf der laufenden Runde — fuer Analyse und Tagesziel.
 final roundLogProvider =
     NotifierProvider<RoundLogController, RoundLog>(RoundLogController.new);

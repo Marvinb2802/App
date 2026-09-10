@@ -4,12 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/model/game_state.dart';
+import '../domain/model/level.dart';
 import '../domain/rules/hint.dart';
 import '../domain/rules/move.dart';
 import '../domain/rules/zen.dart';
 import 'daily.dart';
 import 'daily_goal.dart';
 import 'game_mode.dart';
+import 'level_controller.dart';
 import 'sound.dart';
 import 'providers.dart';
 import 'round_log.dart';
@@ -63,9 +65,59 @@ class GameController extends Notifier<GameState> {
 
     ref.read(hintProvider.notifier).hide();
     _feedback(next);
+    _checkLevel(next);
     unawaited(_checkDailyGoal(next));
     unawaited(_persist(next));
     return true;
+  }
+
+  /// Startet ein Level: eigener Spielcode, vorbelegtes Brett, Zugbegrenzung.
+  void startLevel(Level level) {
+    _history.clear();
+    state = startGame(level.seed).copyWith(board: level.start);
+    ref.read(hintProvider.notifier).reset();
+    ref.read(roundLogProvider.notifier).reset();
+    ref.read(levelProvider.notifier).start(level);
+  }
+
+  /// Prueft nach jedem Zug, ob das Level geschafft oder verloren ist.
+  void _checkLevel(GameState snapshot) {
+    if (ref.read(gameModeProvider) != GameMode.level) return;
+    final session = ref.read(levelProvider);
+    final level = session.level;
+    if (level == null || session.outcome != LevelOutcome.playing) return;
+
+    final log = ref.read(roundLogProvider);
+    final geschafft = level.goal.reached(
+      score: snapshot.score,
+      totalLines: log.totalLines,
+      bestClear: log.bestClear,
+      bestCombo: log.bestCombo,
+    );
+
+    if (geschafft) {
+      ref.read(levelProvider.notifier).settle(LevelOutcome.won);
+      unawaited(_recordLevel(level));
+    } else if (snapshot.isOver || log.moveCount >= level.moveLimit) {
+      ref.read(levelProvider.notifier).settle(LevelOutcome.lost);
+    }
+  }
+
+  /// Haelt den Fortschritt fest und schreibt Sterne gut.
+  Future<void> _recordLevel(Level level) async {
+    ref.read(shopProvider.notifier).earn(3 + level.number ~/ 10);
+    final store = ref.read(storeProvider);
+    if (store == null) return;
+    try {
+      final bisher =
+          int.tryParse(await store.readSetting('levels.done') ?? '') ?? 0;
+      if (level.number > bisher) {
+        await store.writeSetting('levels.done', '${level.number}');
+        ref.invalidate(levelProgressProvider);
+      }
+    } catch (_) {
+      // Ein misslungenes Speichern darf das Spiel nicht stoppen.
+    }
   }
 
   /// Prueft das Ziel des Tages und haelt es fest, sobald es geschafft ist.
@@ -166,6 +218,9 @@ class GameController extends Notifier<GameState> {
   /// Eine beendete Runde wandert in die Bestenliste und raeumt die laufende
   /// Partie weg — sie laesst sich nicht fortsetzen.
   Future<void> _persist(GameState snapshot) async {
+    // Level-Runden gehoeren nicht in die Bestenliste und lassen sich nicht
+    // als offene Partie fortsetzen — ihr Fortschritt steht woanders.
+    if (ref.read(gameModeProvider) == GameMode.level) return;
     final store = ref.read(storeProvider);
     if (store == null) return;
     try {

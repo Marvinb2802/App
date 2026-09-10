@@ -40,6 +40,9 @@ class RoundLog {
   int get bestClear =>
       moves.fold(0, (max, m) => m.clearedLines > max ? m.clearedLines : max);
 
+  /// Alle aufgeloesten Linien der Runde zusammen.
+  int get totalLines => moves.fold(0, (sum, m) => sum + m.clearedLines);
+
   /// Der hoechste erreichte Combo-Stand.
   int get bestCombo => moves.fold(0, (max, m) => m.combo > max ? m.combo : max);
 
