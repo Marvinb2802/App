@@ -157,10 +157,14 @@ tessa/
   Runde gezielt nachspielen lässt.
 - Nach einer Auflösung steht über dem Brett, was der Zug gebracht hat: Punkte,
   Zahl der gefallenen Linien und der angewandte Combo-Faktor.
-- Noch offen: Animationen beim Auflösen und das Hervorheben der gefallenen
-  Linien auf dem Brett selbst. Beides bewusst zurückgestellt, bis die
-  Oberfläche einmal in Augenschein genommen wurde — Bewegung lässt sich nicht
-  sinnvoll blind bauen.
+- Gefallene Linien leuchten auf dem Brett kurz nach (420 ms: aufleuchten,
+  leicht aufblähen, verblassen). Ausgelöst wird das nur von einem *neuen* Zug —
+  ein Undo holt einen älteren Zug zurück und darf nichts blinken lassen.
+  Die Dauer steht als `BoardView.flashDuration` an einer Stelle.
+- Noch offen: das Setzen eines Teils ist unbewegt — dafür müsste `MoveOutcome`
+  die belegten Zellen mitführen, nicht nur ihre Anzahl. Und: Tempo und Stärke
+  der Animation sind nach Gefühl gesetzt und noch von niemandem gesehen
+  worden; sie gehören am Gerät nachjustiert.
 
 ## Tests
 

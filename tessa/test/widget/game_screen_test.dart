@@ -292,4 +292,97 @@ void main() {
 
     expect(find.byKey(const Key('move-feedback')), findsNothing);
   });
+  testWidgets('gefallene Linien leuchten kurz nach', (tester) async {
+    final container = await pumpGame(
+      tester,
+      state: stateWith(
+        board: Board.fromRows(const [
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '#######.',
+        ]),
+        hand: Hand.of([dot, dot, dot]),
+      ),
+    );
+    expect(find.byKey(const Key('clear-flash')), findsNothing);
+
+    container.read(gameControllerProvider.notifier).place(slot: 0, x: 7, y: 7);
+    await tester.pump();
+    expect(find.byKey(const Key('clear-flash')), findsOneWidget);
+
+    // Es bewegt sich auch wirklich: das Leuchten wird schwaecher, die Kacheln
+    // werden groesser.
+    double deckkraft() => tester
+        .widget<Opacity>(find.ancestor(
+          of: find.byKey(const Key('clear-flash')),
+          matching: find.byType(Opacity),
+        ))
+        .opacity;
+    double groesse() => tester
+        .widgetList<Transform>(find.descendant(
+          of: find.byKey(const Key('clear-flash')),
+          matching: find.byType(Transform),
+        ))
+        .first
+        .transform
+        .getMaxScaleOnAxis();
+
+    final deckkraftAmAnfang = deckkraft();
+    final groesseAmAnfang = groesse();
+    expect(deckkraftAmAnfang, closeTo(1, 0.01));
+
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byKey(const Key('clear-flash')), findsOneWidget);
+    expect(deckkraft(), lessThan(deckkraftAmAnfang));
+    expect(groesse(), greaterThan(groesseAmAnfang));
+
+    // Danach ist es von selbst verschwunden.
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('clear-flash')), findsNothing);
+  });
+
+  testWidgets('ein Zug ohne Aufloesung laesst nichts leuchten', (tester) async {
+    final container = await pumpGame(
+      tester,
+      state: stateWith(board: Board.empty(), hand: Hand.of([dot, dot, dot])),
+    );
+
+    container.read(gameControllerProvider.notifier).place(slot: 0, x: 3, y: 3);
+    await tester.pump();
+
+    expect(find.byKey(const Key('clear-flash')), findsNothing);
+  });
+
+  testWidgets('ein Undo laesst nichts erneut aufleuchten', (tester) async {
+    final container = await pumpGame(
+      tester,
+      state: stateWith(
+        board: Board.fromRows(const [
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '#######.',
+        ]),
+        hand: Hand.of([dot, dot, dot]),
+      ),
+    );
+
+    container.read(gameControllerProvider.notifier).place(slot: 0, x: 7, y: 7);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('clear-flash')), findsNothing);
+
+    // Das Undo holt einen aelteren Zug zurueck - das ist kein neuer Treffer.
+    container.read(gameControllerProvider.notifier).undo();
+    await tester.pump();
+    expect(find.byKey(const Key('clear-flash')), findsNothing);
+  });
 }
