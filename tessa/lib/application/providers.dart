@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/database.dart';
 import '../domain/model/game_state.dart';
 import '../domain/rules/placement.dart';
 import 'drag_controller.dart';
@@ -19,6 +20,15 @@ final seedSourceProvider = Provider<SeedSource>((ref) {
   final random = Random();
   return () => random.nextInt(0x100000000);
 });
+
+/// Die geoeffnete Datenbank — oder null, wenn keine da ist.
+///
+/// Tessa laeuft auch ohne: dann wird nur nichts gesichert. main() ersetzt
+/// diesen Wert beim Start, Tests lassen ihn null.
+final databaseProvider = Provider<TessaDatabase?>((ref) => null);
+
+/// Eine beim Start geladene, noch offene Partie.
+final restoredGameProvider = Provider<GameState?>((ref) => null);
 
 /// Der Spielstand der laufenden Runde.
 final gameControllerProvider =

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/model/game_state.dart';
@@ -16,7 +18,9 @@ class GameController extends Notifier<GameState> {
   final List<GameState> _history = [];
 
   @override
-  GameState build() => startGame(ref.read(seedSourceProvider)());
+  GameState build() =>
+      ref.read(restoredGameProvider) ??
+      startGame(ref.read(seedSourceProvider)());
 
   /// Nur zum Pruefen in der Oberflaeche (Vorschau, Abwurfziel).
   bool canPlace(int slot, int x, int y) => canPlaceFromHand(state, slot, x, y);
@@ -29,6 +33,7 @@ class GameController extends Notifier<GameState> {
     if (!canPlaceFromHand(state, slot, x, y)) return false;
     _remember(state);
     state = applyMove(state, slot: slot, x: x, y: y);
+    unawaited(_persist(state));
     return true;
   }
 
@@ -37,6 +42,7 @@ class GameController extends Notifier<GameState> {
   bool undo() {
     if (!state.canUndo || _history.isEmpty) return false;
     state = applyUndo(state, _history.removeLast());
+    unawaited(_persist(state));
     return true;
   }
 
@@ -44,10 +50,30 @@ class GameController extends Notifier<GameState> {
   void restart({int? seed}) {
     _history.clear();
     state = startGame(seed ?? ref.read(seedSourceProvider)());
+    unawaited(_persist(state));
   }
 
   /// Spielt dieselbe Runde noch einmal: gleicher Seed, gleiche Steinsequenz.
   void replay() => restart(seed: state.seed);
+
+  /// Sichert den Stand, sofern eine Datenbank da ist.
+  ///
+  /// Eine beendete Runde wandert in die Bestenliste und raeumt die laufende
+  /// Partie weg — sie laesst sich nicht fortsetzen.
+  Future<void> _persist(GameState snapshot) async {
+    final database = ref.read(databaseProvider);
+    if (database == null) return;
+    try {
+      if (snapshot.isOver) {
+        await database.scores.add(score: snapshot.score, seed: snapshot.seed);
+        await database.games.clear();
+      } else {
+        await database.games.save(snapshot);
+      }
+    } catch (_) {
+      // Ein misslungenes Speichern darf die laufende Runde nicht stoppen.
+    }
+  }
 
   void _remember(GameState snapshot) {
     _history.add(snapshot);

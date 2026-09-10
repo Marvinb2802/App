@@ -111,10 +111,10 @@ tessa/
 │  │  ├─ drag_controller.dart      laufender Zug: Zielzelle, Vorschau, Abbruch
 │  │  └─ providers.dart            Provider an einer Stelle, samt Seed-Quelle
 │  ├─ data/                        Persistenz
-│  │  ├─ database.dart             sqflite öffnen, Migrationen
+│  │  ├─ database.dart             sqflite öffnen, Schema, Migrationen
 │  │  ├─ game_dao.dart             laufende Partie sichern und laden
-│  │  ├─ score_dao.dart            Bestenliste, Statistik
-│  │  └─ settings_repository.dart  Einstellungen
+│  │  ├─ score_dao.dart            Bestenliste mit Seed je Runde
+│  │  └─ settings_repository.dart  Einstellungen als Schlüssel-Wert-Paare
 │  ├─ ui/
 │  │  ├─ screens/                  game_screen samt Abschlussanzeige
 │  │  ├─ widgets/                  board_view, piece_tray, piece_view,
@@ -139,6 +139,14 @@ tessa/
   Züge), Ablage der drei Teile, Punkteleiste mit Combo, Undo und sichtbarem
   Seed, dazu die Abschlussanzeige mit „neue Runde" und „dieselbe noch einmal".
   Ein Widget-Test zieht ein Teil wirklich per Geste aufs Brett.
-- Als Nächstes: `data/` mit sqflite — laufende Partie sichern, Bestenliste.
-- Noch offen in der Oberfläche: Animationen beim Auflösen, Startbildschirm,
-  Anzeige der gefallenen Linien.
+- `data/` steht: sqflite mit drei Tabellen (laufende Partie, Bestenliste,
+  Einstellungen). Die Partie wird nach jedem Zug gesichert und beim Start
+  fortgesetzt; eine beendete Runde wandert in die Bestenliste und die laufende
+  Partie wird weggeräumt. Getestet wird gegen `sqflite_common_ffi` im
+  Arbeitsspeicher, ohne Gerät.
+- Ohne Datenbank läuft Tessa weiter, nur ohne Sichern — `main()` fängt das ab,
+  und `databaseProvider` ist ohne Datenbank schlicht null.
+- Der Undo-Verlauf wird nicht mitgesichert: nach einem Neustart der App gibt es
+  nichts zurückzunehmen, die Zahl der Versuche bleibt aber erhalten.
+- Noch offen: Animationen beim Auflösen, Startbildschirm, eine Ansicht für die
+  Bestenliste, Anzeige der gefallenen Linien.
