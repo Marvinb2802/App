@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../application/shop.dart';
 import '../../domain/model/piece.dart';
 import '../theme/tessa_theme.dart';
 import 'cell_tile.dart';
 
 /// Stellt ein Teil in seiner eigenen Groesse dar.
-class PieceView extends StatelessWidget {
+class PieceView extends ConsumerWidget {
   const PieceView({
     super.key,
     required this.piece,
@@ -18,8 +20,8 @@ class PieceView extends StatelessWidget {
   final double opacity;
 
   @override
-  Widget build(BuildContext context) {
-    final color = pieceColor(piece);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final color = pieceColor(piece, ref.watch(shopProvider).palette);
     return Opacity(
       opacity: opacity,
       child: SizedBox(

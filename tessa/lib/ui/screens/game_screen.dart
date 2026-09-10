@@ -10,6 +10,7 @@ import '../../domain/model/board.dart';
 import '../widgets/board_view.dart';
 import '../widgets/move_feedback.dart';
 import '../widgets/piece_tray.dart';
+import '../../application/round_log.dart';
 import '../format.dart';
 import '../widgets/score_bar.dart';
 import 'scores_screen.dart';
@@ -48,6 +49,82 @@ class GameScreen extends ConsumerWidget {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Was in der Runde gut lief und was liegen blieb.
+///
+/// Moeglich wird das nur, weil zu jedem Zug feststeht, was der beste
+/// verfuegbare Zug gewesen waere — vergleiche domain/rules/hint.dart.
+class _Analyse extends StatelessWidget {
+  const _Analyse({required this.log});
+
+  final RoundLog log;
+
+  @override
+  Widget build(BuildContext context) {
+    if (log.moveCount == 0) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final bester = log.bestMove;
+    final verpasst = log.biggestMiss;
+
+    return Container(
+      key: const Key('analysis'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Deine Runde', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 8),
+          _Zeile(text: '${log.moveCount} Züge gelegt'),
+          if (bester != null)
+            _Zeile(
+              text: 'Bester Zug: Nummer ${bester.index}, '
+                  '${bester.clearedLines} '
+                  '${bester.clearedLines == 1 ? 'Linie' : 'Linien'} '
+                  'für ${zahl(bester.points)} Punkte',
+            ),
+          if (verpasst != null)
+            _Zeile(
+              key: const Key('analysis-miss'),
+              text: 'Größte verpasste Gelegenheit: bei Zug ${verpasst.index} '
+                  'wären ${verpasst.bestLines} Linien möglich gewesen',
+              warnend: true,
+            )
+          else
+            const _Zeile(
+              text: 'Du hast keine große Gelegenheit ausgelassen.',
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Zeile extends StatelessWidget {
+  const _Zeile({super.key, required this.text, this.warnend = false});
+
+  final String text;
+  final bool warnend;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        text,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: warnend
+              ? const Color(0xFFFFC44D)
+              : theme.colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -143,7 +220,9 @@ class _GameOverOverlay extends ConsumerWidget {
                           textAlign: TextAlign.center,
                           style: theme.textTheme.titleMedium),
                     ],
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+                    _Analyse(log: ref.watch(roundLogProvider)),
+                    const SizedBox(height: 20),
                     FilledButton.icon(
                       key: const Key('share'),
                       icon: const Icon(Icons.ios_share_rounded),

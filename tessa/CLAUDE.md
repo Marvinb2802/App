@@ -72,10 +72,22 @@ einer einzelnen Partie.
 - **Tagesrätsel:** der Spielcode kommt aus dem Datum (10.09.2026 → 20260910).
   Alle spielen am selben Tag dieselbe Runde. Eine Serie zählt, an wie vielen
   Tagen in Folge gespielt wurde; ein ausgelassener Tag setzt sie zurück.
+- **Zen:** kein Spielende. Geht nichts mehr, kommt die nächste Hand *aus der
+  Steinfolge*; hilft auch das nicht, wird die vollste Reihe geräumt. Es wird
+  nie neu gewürfelt, und die Rettung gibt keine Punkte.
 - **Tüfteln:** derselbe Spielcode, aber **unbegrenzt zurück**. Weil der Code
   die ganze Steinfolge festlegt, ist eine Runde ein lösbares Rätsel — dieser
   Modus lädt ein, sie auszureizen. Das ist der eigentliche Vorteil der
   Fairness-Garantie gegenüber Spielen mit verstecktem Zufall.
+
+**Tagesziel:** Zusätzlich zur Punktjagd stellt jeder Tag eine Aufgabe (Linien
+in einem Zug, Combo-Stand, Punktzahl). Die Auswahl hängt allein vom Datum ab,
+ist also wie der Spielcode nachrechenbar.
+
+**Analyse am Rundenende:** Vor jedem Zug wird festgehalten, was der beste
+verfügbare Zug gebracht hätte (`findHint`). Am Ende steht da, welcher Zug am
+besten war und wo die größte Gelegenheit liegen blieb. Auch das ist nur
+möglich, weil die Runde vollständig feststeht.
 
 **Bestwert je Spielcode:** Zu jedem Code wird die eigene beste Runde
 festgehalten. Beim Spielen steht der Abstand dazu in der Leiste („noch 600"),
@@ -85,6 +97,30 @@ Nachspielen messbar — bei zufälliger Steinfolge wäre so ein Vergleich sinnlo
 **Hinweise:** drei je Runde (im Tüftel-Modus unbegrenzt). `findHint` sucht den
 Zug, der die meisten Linien auflöst, bei Gleichstand den zuerst gefundenen —
 derselbe Spielstand ergibt also immer denselben Vorschlag.
+
+## Shop — und wo seine Grenze verläuft
+
+Der Shop verkauft **nichts für Geld**. Sterne gibt es fürs Spielen: einen je
+250 Punkte, dazu fünf fürs Tagesziel.
+
+Angeboten werden ausschließlich:
+
+- **Farbsets** für die Teile — reine Kosmetik.
+- **Drei Hinweise** für die laufende Runde.
+
+Die Grenze ergibt sich aus der Fairness-Garantie und ist nicht verhandelbar:
+
+- Kein Angebot berührt die Steinfolge. Es gibt keine besseren Teile, keine
+  Rettung nach dem Ende, kein Weiterspielen gegen Geld oder Werbung.
+- **Im Tagesrätsel sind gekaufte Hinweise gesperrt.** Dort hat jede und jeder
+  dieselben drei — sonst wären die Ergebnisse des Tages nicht mehr
+  vergleichbar, und der Sinn eines gemeinsamen Rätsels wäre dahin.
+- `shop_test.dart` enthält einen Wächter: käme je ein Angebot dazu, das anders
+  wirkt als Aussehen oder Hinweise, schlägt er an.
+
+Sollte später echtes Geld ins Spiel kommen, gilt dasselbe: nur Kosmetik. Dazu
+kämen Pflichten, die noch nicht erfüllt sind (Impressum, AGB, Widerruf,
+Zahlungsabwicklung über die App-Stores).
 
 ## Technik
 

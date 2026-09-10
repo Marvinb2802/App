@@ -8,6 +8,10 @@ enum GameMode {
   /// Das Raetsel des Tages — fuer alle derselbe Spielcode.
   daily,
 
+  /// Zen: kein Spielende. Geht nichts mehr, kommt die naechste Hand aus der
+  /// Steinfolge; notfalls wird die vollste Reihe geraeumt.
+  zen,
+
   /// Tuefteln: derselbe Spielcode, aber unbegrenzt zurueck. Zum Ausreizen
   /// einer Runde, die ja durch ihren Code vollstaendig feststeht.
   practice,

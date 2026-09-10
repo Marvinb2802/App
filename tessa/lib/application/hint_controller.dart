@@ -44,6 +44,9 @@ class HintController extends Notifier<HintState> {
     return true;
   }
 
+  /// Legt Hinweise nach — etwa aus dem Shop.
+  void add(int count) => state = HintState(left: state.left + count, shown: state.shown);
+
   /// Blendet den Vorschlag aus, ohne einen Hinweis zurueckzugeben.
   void hide() => state = HintState(left: state.left);
 

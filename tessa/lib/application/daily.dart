@@ -17,10 +17,15 @@ class DailyStatus {
     required this.playedToday,
     required this.streak,
     required this.lastScore,
+    required this.goalReachedToday,
   });
 
-  static const DailyStatus unknown =
-      DailyStatus(playedToday: false, streak: 0, lastScore: null);
+  static const DailyStatus unknown = DailyStatus(
+    playedToday: false,
+    streak: 0,
+    lastScore: null,
+    goalReachedToday: false,
+  );
 
   final bool playedToday;
 
@@ -29,11 +34,15 @@ class DailyStatus {
 
   /// Die Punktzahl des zuletzt gespielten Tagesraetsels.
   final int? lastScore;
+
+  /// Ob das Ziel des Tages heute schon geschafft wurde.
+  final bool goalReachedToday;
 }
 
 const String _lastDateKey = 'daily.lastDate';
 const String _streakKey = 'daily.streak';
 const String _lastScoreKey = 'daily.lastScore';
+const String _goalDateKey = 'daily.goalDate';
 
 Future<DailyStatus> readDailyStatus(TessaStore? store, DateTime today) async {
   if (store == null) return DailyStatus.unknown;
@@ -49,8 +58,13 @@ Future<DailyStatus> readDailyStatus(TessaStore? store, DateTime today) async {
     playedToday: lastDate == _dayKey(today),
     streak: laeuftNoch ? streak : 0,
     lastScore: lastScore,
+    goalReachedToday: await store.readSetting(_goalDateKey) == _dayKey(today),
   );
 }
+
+/// Haelt fest, dass das Ziel des Tages geschafft wurde.
+Future<void> recordDailyGoal(TessaStore store, DateTime today) =>
+    store.writeSetting(_goalDateKey, _dayKey(today));
 
 /// Haelt fest, dass das Tagesraetsel gespielt wurde, und fuehrt die Serie fort.
 Future<void> recordDailyResult(

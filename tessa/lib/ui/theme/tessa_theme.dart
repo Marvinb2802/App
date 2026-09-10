@@ -64,16 +64,43 @@ ThemeData tessaTheme() {
 
 /// Feste Farben nach Zellenzahl: gleich grosse Teile sehen gleich aus, und die
 /// Hand bleibt auf einen Blick unterscheidbar.
-const List<Color> _pieceColors = [
-  Color(0xFF6C8BFF),
-  Color(0xFF3DD6A0),
-  Color(0xFFFFC44D),
-  Color(0xFFFF7A59),
-  Color(0xFFC77DFF),
-];
+///
+/// Die Farbsets sind reine Kosmetik — sie aendern nichts am Spiel.
+const Map<String, List<Color>> piecePalettes = {
+  'standard': [
+    Color(0xFF6C8BFF),
+    Color(0xFF3DD6A0),
+    Color(0xFFFFC44D),
+    Color(0xFFFF7A59),
+    Color(0xFFC77DFF),
+  ],
+  'neon': [
+    Color(0xFF00E5FF),
+    Color(0xFF39FF14),
+    Color(0xFFFFF700),
+    Color(0xFFFF3D71),
+    Color(0xFFB026FF),
+  ],
+  'pastell': [
+    Color(0xFFA3C4F3),
+    Color(0xFFB9FBC0),
+    Color(0xFFFDE4A6),
+    Color(0xFFFFC9C9),
+    Color(0xFFD8BBFF),
+  ],
+  'mono': [
+    Color(0xFF3A5BC7),
+    Color(0xFF5478E0),
+    Color(0xFF6C8BFF),
+    Color(0xFF8EA6FF),
+    Color(0xFFB3C4FF),
+  ],
+};
 
-Color pieceColor(Piece piece) =>
-    _pieceColors[(piece.cellCount - 1) % _pieceColors.length];
+Color pieceColor(Piece piece, [String palette = 'standard']) {
+  final farben = piecePalettes[palette] ?? piecePalettes['standard']!;
+  return farben[(piece.cellCount - 1) % farben.length];
+}
 
 /// Radius und Abstand einer Zelle, abhaengig von ihrer Kantenlaenge.
 double cellRadius(double cellSize) => cellSize * 0.22;

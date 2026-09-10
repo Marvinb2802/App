@@ -10,6 +10,7 @@ import 'daily.dart';
 import 'drag_controller.dart';
 import 'game_controller.dart';
 import 'hint_controller.dart';
+import 'round_log.dart';
 
 /// Liefert den Spielcode fuer eine neue Runde.
 typedef SeedSource = int Function();
@@ -55,6 +56,10 @@ final dragControllerProvider =
 /// Hinweise: wie viele noch uebrig sind und welcher Zug gerade gezeigt wird.
 final hintProvider =
     NotifierProvider<HintController, HintState>(HintController.new);
+
+/// Der Verlauf der laufenden Runde — fuer Analyse und Tagesziel.
+final roundLogProvider =
+    NotifierProvider<RoundLogController, RoundLog>(RoundLogController.new);
 
 /// Die besten Runden. Ohne Speicher bleibt die Liste leer.
 final topScoresProvider = FutureProvider<List<ScoreEntry>>((ref) async {

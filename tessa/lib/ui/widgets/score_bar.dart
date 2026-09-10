@@ -103,6 +103,7 @@ class ScoreBar extends ConsumerWidget {
   String _untertitel(GameMode mode, int seed) => switch (mode) {
         GameMode.daily => 'Tagesrätsel · Spielcode $seed',
         GameMode.practice => 'Tüfteln · Spielcode $seed',
+        GameMode.zen => 'Zen · Spielcode $seed',
         GameMode.normal => 'Spielcode $seed',
       };
 }

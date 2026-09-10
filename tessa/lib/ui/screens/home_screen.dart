@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../application/daily_goal.dart';
 import '../../application/game_mode.dart';
 import '../../application/providers.dart';
 import '../format.dart';
 import '../theme/tessa_theme.dart';
 import 'game_screen.dart';
 import 'scores_screen.dart';
+import 'shop_screen.dart';
 import 'stats_screen.dart';
 
 /// Einstieg: Tagesrätsel, laufende Runde, neue Runde, Tüfteln, Spielcode.
@@ -66,6 +68,8 @@ class HomeScreen extends ConsumerWidget {
                     playedToday: daily?.playedToday ?? false,
                     streak: daily?.streak ?? 0,
                     lastScore: daily?.lastScore,
+                    goal: goalForDate(ref.watch(todayProvider)),
+                    goalReached: daily?.goalReachedToday ?? false,
                     onPlay: () => _start(context, ref, GameMode.daily,
                         seed: ref.read(dailyCodeProvider)),
                   ),
@@ -82,6 +86,12 @@ class HomeScreen extends ConsumerWidget {
                     key: const Key('new-game'),
                     onPressed: () => _start(context, ref, GameMode.normal),
                     child: const Text('Neue Runde'),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton(
+                    key: const Key('zen'),
+                    onPressed: () => _start(context, ref, GameMode.zen),
+                    child: const Text('Zen — ohne Spielende'),
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton(
@@ -108,8 +118,11 @@ class HomeScreen extends ConsumerWidget {
                     child: const Text('Mit Spielcode spielen'),
                   ),
                   const Divider(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  // Umbrechend statt nebeneinander: drei Knoepfe passen auf
+                  // schmalen Geraeten nicht in eine Zeile.
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 4,
                     children: [
                       TextButton.icon(
                         key: const Key('home-scores'),
@@ -118,6 +131,16 @@ class HomeScreen extends ConsumerWidget {
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => const ScoresScreen(),
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        key: const Key('home-shop'),
+                        icon: const Icon(Icons.star_outline_rounded),
+                        label: const Text('Shop'),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const ShopScreen(),
                           ),
                         ),
                       ),
@@ -170,6 +193,8 @@ class _DailyCard extends StatelessWidget {
     required this.playedToday,
     required this.streak,
     required this.lastScore,
+    required this.goal,
+    required this.goalReached,
     required this.onPlay,
   });
 
@@ -177,6 +202,8 @@ class _DailyCard extends StatelessWidget {
   final bool playedToday;
   final int streak;
   final int? lastScore;
+  final DailyGoal goal;
+  final bool goalReached;
   final VoidCallback onPlay;
 
   @override
@@ -215,6 +242,39 @@ class _DailyCard extends StatelessWidget {
                   : 'Jeden Tag dieselbe Runde für alle. Spielcode $code.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              key: const Key('daily-goal'),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: (goalReached ? const Color(0xFF3DD6A0) : tessaAccent)
+                    .withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    goalReached
+                        ? Icons.check_circle_rounded
+                        : Icons.flag_outlined,
+                    size: 18,
+                    color: goalReached ? const Color(0xFF3DD6A0) : tessaAccent,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Ziel: ${goal.text}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: goalReached
+                            ? const Color(0xFF3DD6A0)
+                            : theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

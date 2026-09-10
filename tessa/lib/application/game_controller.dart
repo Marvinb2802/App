@@ -4,11 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/model/game_state.dart';
+import '../domain/rules/hint.dart';
 import '../domain/rules/move.dart';
+import '../domain/rules/zen.dart';
 import 'daily.dart';
+import 'daily_goal.dart';
 import 'game_mode.dart';
 import 'sound.dart';
 import 'providers.dart';
+import 'round_log.dart';
+import 'shop.dart';
 
 /// Fuehrt die Runde: Zuege, Undo, Neustart.
 ///
@@ -35,12 +40,51 @@ class GameController extends Notifier<GameState> {
   /// Spielstand unveraendert.
   bool place({required int slot, required int x, required int y}) {
     if (!canPlaceFromHand(state, slot, x, y)) return false;
+
+    // Was der beste verfuegbare Zug gebracht haette — Grundlage der Analyse
+    // am Rundenende. Muss vor dem Zug ermittelt werden.
+    final bestMoeglich = findHint(state.board, state.hand)?.clearedLines ?? 0;
+    final zugnummer = ref.read(roundLogProvider).moveCount + 1;
+
     _remember(state);
-    state = applyMove(state, slot: slot, x: x, y: y);
+    var next = applyMove(state, slot: slot, x: x, y: y);
+    if (next.isOver && ref.read(gameModeProvider) == GameMode.zen) {
+      next = rescue(next);
+    }
+    state = next;
+
+    ref.read(roundLogProvider.notifier).record(MoveRecord(
+          index: zugnummer,
+          clearedLines: next.lastMove!.clearedLines,
+          bestLines: bestMoeglich,
+          points: next.lastMove!.points,
+          combo: next.lastMove!.appliedCombo,
+        ));
+
     ref.read(hintProvider.notifier).hide();
-    _feedback(state);
-    unawaited(_persist(state));
+    _feedback(next);
+    unawaited(_checkDailyGoal(next));
+    unawaited(_persist(next));
     return true;
+  }
+
+  /// Prueft das Ziel des Tages und haelt es fest, sobald es geschafft ist.
+  Future<void> _checkDailyGoal(GameState snapshot) async {
+    if (ref.read(gameModeProvider) != GameMode.daily) return;
+    final store = ref.read(storeProvider);
+    if (store == null) return;
+
+    final today = ref.read(todayProvider);
+    final goal = goalForDate(today);
+    if (!goal.reachedBy(ref.read(roundLogProvider), snapshot)) return;
+
+    try {
+      await recordDailyGoal(store, today);
+      ref.read(shopProvider.notifier).earn(starsForDailyGoal);
+      ref.invalidate(dailyStatusProvider);
+    } catch (_) {
+      // Ein misslungenes Speichern darf die Runde nicht stoppen.
+    }
   }
 
   /// Nimmt den letzten Zug zurueck.
@@ -52,6 +96,7 @@ class GameController extends Notifier<GameState> {
         ? previous
         : applyUndo(state, previous);
     ref.read(hintProvider.notifier).hide();
+    ref.read(roundLogProvider.notifier).undoLast();
     unawaited(_persist(state));
     return true;
   }
@@ -61,6 +106,7 @@ class GameController extends Notifier<GameState> {
     _history.clear();
     state = startGame(seed ?? ref.read(seedSourceProvider)());
     ref.read(hintProvider.notifier).reset();
+    ref.read(roundLogProvider.notifier).reset();
     unawaited(_persist(state));
   }
 
@@ -109,6 +155,7 @@ class GameController extends Notifier<GameState> {
         return;
       }
       await store.addScore(score: snapshot.score, seed: snapshot.seed);
+      ref.read(shopProvider.notifier).earn(starsForScore(snapshot.score));
       await store.clearGame();
       if (ref.read(gameModeProvider) == GameMode.daily &&
           snapshot.seed == ref.read(dailyCodeProvider)) {
