@@ -68,8 +68,16 @@ GameState stateWith({
       isOver: isOver,
     );
 
+/// Der tatsaechliche Vergroesserungsfaktor eines Transform.
+///
+/// Nicht getMaxScaleOnAxis: das nimmt die Z-Achse mit, die bei Transform.scale
+/// immer 1 bleibt — Werte unter 1 waeren dann nicht zu sehen.
+double scaleOf(Finder finder, WidgetTester tester) =>
+    tester.widget<Transform>(finder).transform.entry(0, 0);
+
 void main() {
   final dot = PieceCatalog.byId('dot');
+  final square = PieceCatalog.byId('square2');
 
   testWidgets('zeigt Brett, Hand, Punkte und Seed', (tester) async {
     await pumpGame(tester, seed: 12345);
@@ -166,7 +174,6 @@ void main() {
     expect(find.byKey(const Key('game-over')), findsNothing);
   });
   testWidgets('ein Teil laesst sich aufs Brett ziehen', (tester) async {
-    final square = PieceCatalog.byId('square2');
     final container = await pumpGame(
       tester,
       state: stateWith(
@@ -203,7 +210,6 @@ void main() {
   });
 
   testWidgets('ein Abwurf neben dem Brett aendert nichts', (tester) async {
-    final square = PieceCatalog.byId('square2');
     final container = await pumpGame(
       tester,
       state: stateWith(
@@ -323,14 +329,14 @@ void main() {
           matching: find.byType(Opacity),
         ))
         .opacity;
-    double groesse() => tester
-        .widgetList<Transform>(find.descendant(
-          of: find.byKey(const Key('clear-flash')),
-          matching: find.byType(Transform),
-        ))
-        .first
-        .transform
-        .getMaxScaleOnAxis();
+    double groesse() => scaleOf(
+        find
+            .descendant(
+              of: find.byKey(const Key('clear-flash')),
+              matching: find.byType(Transform),
+            )
+            .first,
+        tester);
 
     final deckkraftAmAnfang = deckkraft();
     final groesseAmAnfang = groesse();
@@ -384,5 +390,69 @@ void main() {
     container.read(gameControllerProvider.notifier).undo();
     await tester.pump();
     expect(find.byKey(const Key('clear-flash')), findsNothing);
+  });
+  testWidgets('ein gelegtes Teil springt auf', (tester) async {
+    final container = await pumpGame(
+      tester,
+      state: stateWith(board: Board.empty(), hand: Hand.of([square, dot, dot])),
+    );
+    expect(find.byKey(const Key('pop-2-2')), findsNothing);
+
+    container.read(gameControllerProvider.notifier).place(slot: 0, x: 2, y: 2);
+    await tester.pump();
+
+    // Alle vier Zellen des 2x2-Teils fangen klein an.
+    for (final cell in const ['2-2', '3-2', '2-3', '3-3']) {
+      final pop = find.byKey(Key('pop-$cell'));
+      expect(pop, findsOneWidget, reason: cell);
+      expect(scaleOf(pop, tester), lessThan(1), reason: cell);
+    }
+
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pop-2-2')), findsNothing,
+        reason: 'danach sitzt die Kachel einfach da');
+    expect(find.byKey(const Key('cell-2-2')), findsOneWidget);
+  });
+
+  testWidgets('eine sofort wieder gefallene Zelle springt nicht auf',
+      (tester) async {
+    final container = await pumpGame(
+      tester,
+      state: stateWith(
+        board: Board.fromRows(const [
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '#######.',
+        ]),
+        hand: Hand.of([dot, dot, dot]),
+      ),
+    );
+
+    container.read(gameControllerProvider.notifier).place(slot: 0, x: 7, y: 7);
+    await tester.pump();
+
+    expect(find.byKey(const Key('pop-7-7')), findsNothing,
+        reason: 'die Zelle ist mit der Linie gefallen, sie leuchtet nur nach');
+    expect(find.byKey(const Key('clear-flash')), findsOneWidget);
+  });
+
+  testWidgets('ein Undo laesst nichts aufspringen', (tester) async {
+    final container = await pumpGame(
+      tester,
+      state: stateWith(board: Board.empty(), hand: Hand.of([square, dot, dot])),
+    );
+
+    container.read(gameControllerProvider.notifier).place(slot: 0, x: 2, y: 2);
+    await tester.pumpAndSettle();
+
+    container.read(gameControllerProvider.notifier).undo();
+    await tester.pump();
+
+    expect(find.byKey(const Key('pop-2-2')), findsNothing);
   });
 }

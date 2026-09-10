@@ -38,6 +38,7 @@ GameState applyMove(
     throw ArgumentError('Platz $slot ist leer');
   }
 
+  final belegteZellen = cellsAt(piece, x, y).toList();
   final cleared = resolveLines(place(state.board, piece, x, y));
   final points = scoreForMove(
     placedCells: piece.cellCount,
@@ -61,7 +62,7 @@ GameState applyMove(
     combo: nextCombo(state.combo, cleared.lineCount),
     isOver: isGameOver(cleared.board, hand),
     lastMove: MoveOutcome(
-      placedCells: piece.cellCount,
+      placedCells: belegteZellen,
       clearedRows: cleared.rows,
       clearedColumns: cleared.columns,
       appliedCombo: state.combo,

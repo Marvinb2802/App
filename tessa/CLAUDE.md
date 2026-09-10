@@ -161,10 +161,19 @@ tessa/
   leicht aufblähen, verblassen). Ausgelöst wird das nur von einem *neuen* Zug —
   ein Undo holt einen älteren Zug zurück und darf nichts blinken lassen.
   Die Dauer steht als `BoardView.flashDuration` an einer Stelle.
-- Noch offen: das Setzen eines Teils ist unbewegt — dafür müsste `MoveOutcome`
-  die belegten Zellen mitführen, nicht nur ihre Anzahl. Und: Tempo und Stärke
-  der Animation sind nach Gefühl gesetzt und noch von niemandem gesehen
-  worden; sie gehören am Gerät nachjustiert.
+- Ein gelegtes Teil springt auf (220 ms, `BoardView.popDuration`): die frisch
+  belegten Zellen fangen klein an und rasten mit leichtem Überschwingen ein.
+  Zellen, die im selben Zug wieder gefallen sind, springen nicht auf — sie
+  gehören zum Nachleuchten. Dafür führt `MoveOutcome` die belegten Zellen mit,
+  nicht nur ihre Anzahl (`placedCellCount`).
+- Tempo und Stärke beider Animationen sind nach Gefühl gesetzt und in der
+  Entwicklungsumgebung von niemandem gesehen worden. Sie gehören am Gerät
+  nachjustiert: `flashDuration`, `popDuration` und die beiden Faktoren in
+  `_clearFlash` und `_maybePop`.
+
+Beim Prüfen von Animationen im Test: `Matrix4.getMaxScaleOnAxis()` nimmt die
+Z-Achse mit, die bei `Transform.scale` immer 1 bleibt — Werte unter 1 sind
+damit nicht messbar. Der tatsächliche Faktor steht in `transform.entry(0, 0)`.
 
 ## Tests
 

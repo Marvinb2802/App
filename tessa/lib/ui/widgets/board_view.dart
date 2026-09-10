@@ -27,7 +27,7 @@ class BoardView extends ConsumerStatefulWidget {
 }
 
 class _BoardViewState extends ConsumerState<BoardView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final GlobalKey _boardKey = GlobalKey();
 
   /// Wie lange eine gefallene Linie nachleuchtet. Kurz genug, um beim
@@ -43,27 +43,55 @@ class _BoardViewState extends ConsumerState<BoardView>
       }
     });
 
+  /// Wie lange ein frisch gelegtes Teil aufspringt.
+  static const Duration popDuration = Duration(milliseconds: 220);
+
+  late final AnimationController _pop = AnimationController(
+    vsync: this,
+    duration: popDuration,
+  )..addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        setState(() => _poppingCells = const {});
+      }
+    });
+
   /// Der Zug, dessen Linien gerade nachleuchten.
   MoveOutcome? _flashedMove;
+
+  /// Die Zellen, die gerade aufspringen.
+  Set<Cell> _poppingCells = const {};
 
   @override
   void dispose() {
     _flash.dispose();
+    _pop.dispose();
     super.dispose();
   }
 
-  /// Laesst die gefallenen Linien aufleuchten — aber nur bei einem neuen Zug.
+  /// Setzt die Bewegung eines neuen Zuges in Gang: das gelegte Teil springt
+  /// auf, gefallene Linien leuchten nach.
   ///
-  /// Ein Undo stellt einen aelteren Zug wieder her und senkt die Punktzahl;
-  /// dabei soll nichts blinken.
+  /// Nur bei einem *neuen* Zug. Ein Undo stellt einen aelteren Zug wieder her
+  /// und senkt die Punktzahl; dabei soll sich nichts ruehren.
   void _onStateChanged(GameState? previous, GameState next) {
     if (previous == null) return;
     final move = next.lastMove;
-    if (move == null || !move.didClear) return;
+    if (move == null) return;
     if (next.score <= previous.score) return;
     if (identical(move, previous.lastMove)) return;
-    setState(() => _flashedMove = move);
-    _flash.forward(from: 0);
+
+    // Zellen, die im selben Zug wieder gefallen sind, springen nicht auf —
+    // sie gehoeren zum Nachleuchten.
+    final gelegt = move.placedCells
+        .where((cell) => next.board.isFilled(cell.x, cell.y))
+        .toSet();
+
+    setState(() {
+      _poppingCells = gelegt;
+      if (move.didClear) _flashedMove = move;
+    });
+    if (gelegt.isNotEmpty) _pop.forward(from: 0);
+    if (move.didClear) _flash.forward(from: 0);
   }
 
   /// Rechnet die linke obere Ecke des gezogenen Teils in ein Feld um.
@@ -114,14 +142,33 @@ class _BoardViewState extends ConsumerState<BoardView>
             Positioned(
               left: x * widget.cellSize,
               top: y * widget.cellSize,
-              child: CellTile(
-                size: widget.cellSize,
-                color: board.isFilled(x, y)
-                    ? scheme.primary
-                    : scheme.surfaceContainerHighest,
+              child: _maybePop(
+                Cell(x, y),
+                CellTile(
+                  key: Key('cell-$x-$y'),
+                  size: widget.cellSize,
+                  color: board.isFilled(x, y)
+                      ? scheme.primary
+                      : scheme.surfaceContainerHighest,
+                ),
               ),
             ),
       ],
+    );
+  }
+
+  /// Laesst eine frisch belegte Zelle aufspringen: klein anfangen, kurz
+  /// ueber die volle Groesse hinausschiessen, einrasten.
+  Widget _maybePop(Cell cell, Widget tile) {
+    if (!_poppingCells.contains(cell)) return tile;
+    return AnimatedBuilder(
+      animation: _pop,
+      child: tile,
+      builder: (context, child) => Transform.scale(
+        key: Key('pop-${cell.x}-${cell.y}'),
+        scale: 0.55 + 0.45 * Curves.easeOutBack.transform(_pop.value),
+        child: child,
+      ),
     );
   }
 

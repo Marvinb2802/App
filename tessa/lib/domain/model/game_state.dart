@@ -1,4 +1,5 @@
 import 'board.dart';
+import 'cell.dart';
 import 'hand.dart';
 
 /// Was ein einzelner Zug bewirkt hat. Die Oberflaeche braucht das fuer
@@ -16,11 +17,17 @@ class MoveOutcome {
     required this.points,
   });
 
-  final int placedCells;
+  /// Die Zellen, die das Teil belegt hat — in Brettkoordinaten, damit die
+  /// Oberflaeche sie hervorheben kann. Manche davon sind im selben Zug wieder
+  /// gefallen, wenn sie in einer vollen Linie lagen.
+  final List<Cell> placedCells;
+
   final List<int> clearedRows;
   final List<int> clearedColumns;
   final int appliedCombo;
   final int points;
+
+  int get placedCellCount => placedCells.length;
 
   int get clearedLines => clearedRows.length + clearedColumns.length;
 
@@ -28,7 +35,8 @@ class MoveOutcome {
 
   @override
   String toString() =>
-      'Zug: $placedCells Zellen, $clearedLines Linien, Combo $appliedCombo, $points Punkte';
+      'Zug: $placedCellCount Zellen, $clearedLines Linien, '
+      'Combo $appliedCombo, $points Punkte';
 }
 
 /// Der vollstaendige Spielstand einer Runde.
