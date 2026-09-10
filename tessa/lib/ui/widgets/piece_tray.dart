@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../application/game_mode.dart';
 import '../../application/providers.dart';
 import '../../domain/model/hand.dart';
 import '../theme/tessa_theme.dart';
@@ -60,7 +61,9 @@ class PieceTray extends ConsumerWidget {
     }
 
     final drag = ref.read(dragControllerProvider.notifier);
-    return Draggable<int>(
+    final darfDrehen = ref.watch(gameModeProvider) == GameMode.rotation;
+
+    final draggable = Draggable<int>(
       key: Key('tray-$slot'),
       data: slot,
       dragAnchorStrategy: (_, _, _) => pieceDragAnchor(piece, boardCellSize),
@@ -74,6 +77,16 @@ class PieceTray extends ConsumerWidget {
       },
       onDraggableCanceled: (_, _) => drag.cancel(),
       child: PieceView(piece: piece, cellSize: trayCellSize),
+    );
+
+    if (!darfDrehen) return draggable;
+
+    // Im Rotations-Modus dreht ein Antippen das Teil. Das Ziehen bleibt davon
+    // unberuehrt: der Draggable meldet sich erst bei Bewegung.
+    return GestureDetector(
+      key: Key('rotate-$slot'),
+      onTap: () => ref.read(gameControllerProvider.notifier).rotate(slot),
+      child: draggable,
     );
   }
 }

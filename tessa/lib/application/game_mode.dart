@@ -11,6 +11,10 @@ enum GameMode {
   /// Ein Level aus der Levelliste: fester Spielcode, Ziel und Zugbegrenzung.
   level,
 
+  /// Teile duerfen vor dem Legen gedreht werden — die eine Ausnahme von der
+  /// Regel "nicht rotieren".
+  rotation,
+
   /// Zen: kein Spielende. Geht nichts mehr, kommt die naechste Hand aus der
   /// Steinfolge; notfalls wird die vollste Reihe geraeumt.
   zen,

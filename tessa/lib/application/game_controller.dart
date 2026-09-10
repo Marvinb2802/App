@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/model/game_state.dart';
+import '../domain/model/hand.dart';
 import '../domain/model/level.dart';
 import '../domain/rules/hint.dart';
 import '../domain/rules/move.dart';
@@ -134,6 +135,7 @@ class GameController extends Notifier<GameState> {
       await recordDailyGoal(store, today);
       ref.read(shopProvider.notifier).earn(starsForDailyGoal);
       ref.invalidate(dailyStatusProvider);
+      ref.invalidate(weekStatusProvider);
     } catch (_) {
       // Ein misslungenes Speichern darf die Runde nicht stoppen.
     }
@@ -160,6 +162,23 @@ class GameController extends Notifier<GameState> {
     ref.read(hintProvider.notifier).reset();
     ref.read(roundLogProvider.notifier).reset();
     unawaited(_persist(state));
+  }
+
+  /// Dreht das Teil in [slot] um eine Vierteldrehung.
+  ///
+  /// Nur im Rotations-Modus erlaubt. Zaehlt nicht als Zug und aendert die
+  /// Steinfolge nicht — es ist dasselbe Teil, nur anders herum.
+  bool rotate(int slot) {
+    if (ref.read(gameModeProvider) != GameMode.rotation) return false;
+    if (state.isOver) return false;
+    final piece = state.hand.pieceAt(slot);
+    if (piece == null) return false;
+
+    final slots = [...state.hand.slots];
+    slots[slot] = piece.rotated();
+    state = state.copyWith(hand: Hand(slots));
+    ref.read(hintProvider.notifier).hide();
+    return true;
   }
 
   /// Legt zusaetzliche Zurueck-Zuege nach — aus dem Shop.
@@ -235,6 +254,7 @@ class GameController extends Notifier<GameState> {
           snapshot.seed == ref.read(dailyCodeProvider)) {
         await recordDailyResult(store, ref.read(todayProvider), snapshot.score);
         ref.invalidate(dailyStatusProvider);
+        ref.invalidate(weekStatusProvider);
       }
       ref.invalidate(topScoresProvider);
       ref.invalidate(bestForCodeProvider(snapshot.seed));

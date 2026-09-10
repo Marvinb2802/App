@@ -57,6 +57,28 @@ class Piece {
 
   int get cellCount => cells.length;
 
+  /// Wie oft dieses Teil gegenueber der Katalogform gedreht ist (0 bis 3).
+  int get rotation {
+    final teile = id.split('@');
+    return teile.length > 1 ? int.tryParse(teile[1]) ?? 0 : 0;
+  }
+
+  /// Die Kennung der ungedrehten Form.
+  String get baseId => id.split('@').first;
+
+  /// Dreht das Teil um eine Vierteldrehung im Uhrzeigersinn.
+  ///
+  /// Nur im Rotations-Modus benutzt; im Grundspiel werden Teile nicht gedreht
+  /// (siehe Spielregeln in CLAUDE.md). Die Drehstufe steht in der Kennung,
+  /// damit ein gedrehtes Teil gespeichert und wiederhergestellt werden kann.
+  Piece rotated() {
+    final gedreht = [
+      for (final cell in cells) Cell(height - 1 - cell.y, cell.x),
+    ];
+    final stufe = (rotation + 1) % 4;
+    return Piece.fromCells(stufe == 0 ? baseId : '$baseId@$stufe', gedreht);
+  }
+
   @override
   bool operator ==(Object other) => other is Piece && other.id == id;
 

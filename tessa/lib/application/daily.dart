@@ -43,6 +43,7 @@ const String _lastDateKey = 'daily.lastDate';
 const String _streakKey = 'daily.streak';
 const String _lastScoreKey = 'daily.lastScore';
 const String _goalDateKey = 'daily.goalDate';
+String _scoreKeyFor(DateTime day) => 'daily.score.${_dayKey(day)}';
 
 Future<DailyStatus> readDailyStatus(TessaStore? store, DateTime today) async {
   if (store == null) return DailyStatus.unknown;
@@ -82,4 +83,71 @@ Future<void> recordDailyResult(
   await store.writeSetting(_lastDateKey, _dayKey(today));
   await store.writeSetting(_streakKey, '$streak');
   await store.writeSetting(_lastScoreKey, '$score');
+  // Fuer das Wochenraetsel wird jeder Tag einzeln festgehalten.
+  await store.writeSetting(_scoreKeyFor(today), '$score');
+}
+
+/// Die sieben Tage der Woche, in der [date] liegt — Montag bis Sonntag.
+List<DateTime> weekOf(DateTime date) {
+  final montag = DateTime(date.year, date.month, date.day - (date.weekday - 1));
+  return [
+    for (var i = 0; i < 7; i++)
+      DateTime(montag.year, montag.month, montag.day + i),
+  ];
+}
+
+/// Ein Tag im Wochenraetsel.
+class WeekDay {
+  const WeekDay({
+    required this.date,
+    required this.code,
+    required this.score,
+    required this.isToday,
+    required this.isFuture,
+  });
+
+  final DateTime date;
+  final int code;
+
+  /// Die erreichte Punktzahl, oder null, wenn der Tag noch offen ist.
+  final int? score;
+
+  final bool isToday;
+  final bool isFuture;
+}
+
+/// Die laufende Woche mit allen sieben Raetseln.
+class WeekStatus {
+  const WeekStatus(this.days);
+
+  static const WeekStatus unknown = WeekStatus([]);
+
+  final List<WeekDay> days;
+
+  /// Alle Punkte der Woche zusammen.
+  int get total =>
+      days.fold(0, (summe, tag) => summe + (tag.score ?? 0));
+
+  /// Wie viele Tage schon gespielt sind.
+  int get played => days.where((tag) => tag.score != null).length;
+
+  bool get isEmpty => days.isEmpty;
+}
+
+Future<WeekStatus> readWeekStatus(TessaStore? store, DateTime today) async {
+  final heute = DateTime(today.year, today.month, today.day);
+  final tage = <WeekDay>[];
+
+  for (final tag in weekOf(heute)) {
+    final gespeichert =
+        store == null ? null : await store.readSetting(_scoreKeyFor(tag));
+    tage.add(WeekDay(
+      date: tag,
+      code: codeForDate(tag),
+      score: int.tryParse(gespeichert ?? ''),
+      isToday: tag == heute,
+      isFuture: tag.isAfter(heute),
+    ));
+  }
+  return WeekStatus(tage);
 }

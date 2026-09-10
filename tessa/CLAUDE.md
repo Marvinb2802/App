@@ -87,6 +87,13 @@ einer einzelnen Partie.
   vorbelegtem Brett und begrenzten Zügen. Alles hängt allein an der Nummer
   (`domain/model/level.dart`), es gibt also keine Liste zu pflegen. Die Kurve
   steht in `LevelTuning` an einer Stelle.
+- **Wochenrätsel:** die sieben Tagesrätsel der laufenden Woche (Montag bis
+  Sonntag) mit Gesamtpunktzahl. Vergangene Tage lassen sich nachspielen,
+  gewertet wird aber nur der Versuch am Tag selbst.
+- **Drehen erlaubt:** die eine Ausnahme von „Teile werden nicht rotiert".
+  Antippen dreht, Ziehen legt. Die Drehstufe steht in der Kennung
+  (`line3h@1`), damit ein gedrehtes Teil gespeichert und wiederhergestellt
+  werden kann.
 - **Zen:** kein Spielende. Geht nichts mehr, kommt die nächste Hand *aus der
   Steinfolge*; hilft auch das nicht, wird die vollste Reihe geräumt. Es wird
   nie neu gewürfelt, und die Rettung gibt keine Punkte.
@@ -338,6 +345,15 @@ jeweils gegen eine absichtlich eingebaute Verletzung geprüft:
 
 Widget-Tests gegen die Datenbank brauchen `databaseFactoryFfiNoIsolate` —
 nur so laufen die Futures in der künstlichen Zeit eines Widget-Tests zu Ende.
+
+**Ton im Browser:** Safari und Chrome lassen Ton nur zu, wenn er das erste Mal
+*während einer Berührung* startet. Deshalb bereitet `SoundOutput.unlock()` beim
+allerersten Fingerdruck alle Klänge lautlos vor (`TessaApp`, `Listener`). Wer
+erst beim ersten gelegten Teil anfängt, ist zu spät — dann bleibt es stumm.
+
+**Vibration im Browser ist nicht möglich.** `HapticFeedback` läuft über einen
+Plattformkanal, den es im Web nicht gibt; iOS-Safari kennt überhaupt keine
+Vibrations-Schnittstelle. Die Einstellung ist dort abgeblendet und beschriftet.
 
 Widget-Tests mounten den Bildschirm, um den es geht, direkt in einer
 `MaterialApp` — nicht `TessaApp`, deren Einstieg der Startbildschirm ist.

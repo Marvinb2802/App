@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -53,12 +54,34 @@ class StatsScreen extends ConsumerWidget {
             value: sound,
             onChanged: (_) => ref.read(soundProvider.notifier).toggle(),
           ),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                key: const Key('test-sound'),
+                icon: const Icon(Icons.volume_up_outlined),
+                label: const Text('Ton testen'),
+                onPressed: () {
+                  // Erst vorbereiten, dann spielen: im Browser zaehlt genau
+                  // dieser Fingerdruck als Freigabe.
+                  ref.read(soundProvider.notifier).unlock();
+                  ref.read(soundProvider.notifier).play(Sounds.clear(3));
+                },
+              ),
+            ),
+          ),
           SwitchListTile(
             key: const Key('haptics-switch'),
             title: const Text('Vibration'),
-            subtitle: const Text('Kurzes Rütteln beim Legen und Auflösen'),
+            subtitle: Text(
+              kIsWeb
+                  ? 'Im Browser nicht möglich — nur in der App auf dem Handy'
+                  : 'Kurzes Rütteln beim Legen und Auflösen',
+            ),
             value: haptics,
-            onChanged: (_) => ref.read(hapticsProvider.notifier).toggle(),
+            onChanged:
+                kIsWeb ? null : (_) => ref.read(hapticsProvider.notifier).toggle(),
           ),
           if (totals.rounds == 0)
             const Padding(

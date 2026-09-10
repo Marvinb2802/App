@@ -9,6 +9,7 @@ import '../theme/tessa_theme.dart';
 import 'game_screen.dart';
 import 'levels_screen.dart';
 import 'scores_screen.dart';
+import 'week_screen.dart';
 import 'shop_screen.dart';
 import 'stats_screen.dart';
 
@@ -111,6 +112,22 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton(
+                    key: const Key('rotation'),
+                    onPressed: () => _start(context, ref, GameMode.rotation),
+                    child: const Text('Drehen erlaubt'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
+                    child: Text(
+                      'Antippen dreht ein Teil, Ziehen legt es.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton(
                     key: const Key('practice'),
                     onPressed: () => _start(context, ref, GameMode.practice),
                     child: const Text('Tüfteln'),
@@ -147,6 +164,16 @@ class HomeScreen extends ConsumerWidget {
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => const ScoresScreen(),
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        key: const Key('home-week'),
+                        icon: const Icon(Icons.date_range_outlined),
+                        label: const Text('Woche'),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const WeekScreen(),
                           ),
                         ),
                       ),

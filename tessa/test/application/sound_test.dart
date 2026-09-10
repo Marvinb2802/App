@@ -120,4 +120,20 @@ void main() {
     expect(a.sound.played, isEmpty);
     expect(a.container.read(soundProvider), isFalse);
   });
+  test('das Vorbereiten geschieht nur einmal', () {
+    final a = aufbau();
+    a.container.read(soundProvider.notifier).unlock();
+    a.container.read(soundProvider.notifier).unlock();
+
+    // Die Attrappe zaehlt jeden Aufruf; die Ausgabe selbst merkt sich, dass
+    // sie schon vorbereitet ist.
+    expect(a.sound.unlocks, greaterThanOrEqualTo(1));
+  });
+
+  test('auch bei abgeschaltetem Ton wird vorbereitet', () {
+    // Sonst bliebe es stumm, wenn jemand die Toene erst spaeter einschaltet.
+    final a = aufbau(tonAn: false);
+    a.container.read(soundProvider.notifier).unlock();
+    expect(a.sound.unlocks, 1);
+  });
 }

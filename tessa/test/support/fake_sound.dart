@@ -7,8 +7,14 @@ import 'package:tessa/application/sound.dart';
 class RecordingOutput implements SoundOutput {
   final List<String> played = [];
 
+  /// Wie oft die Klaenge vorbereitet wurden.
+  int unlocks = 0;
+
   @override
   Future<void> play(String asset) async => played.add(asset);
+
+  @override
+  Future<void> unlock() async => unlocks += 1;
 
   @override
   Future<void> dispose() async {}

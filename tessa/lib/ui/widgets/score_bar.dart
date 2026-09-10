@@ -105,6 +105,7 @@ class ScoreBar extends ConsumerWidget {
         GameMode.daily => 'Tagesrätsel · Spielcode $seed',
         GameMode.practice => 'Tüfteln · Spielcode $seed',
         GameMode.zen => 'Zen · Spielcode $seed',
+        GameMode.rotation => 'Drehen erlaubt · Spielcode $seed',
         GameMode.normal => 'Spielcode $seed',
       };
 }

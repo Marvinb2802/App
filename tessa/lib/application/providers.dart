@@ -55,6 +55,10 @@ final dailyCodeProvider =
 final dailyStatusProvider = FutureProvider<DailyStatus>((ref) =>
     readDailyStatus(ref.watch(storeProvider), ref.watch(todayProvider)));
 
+/// Die laufende Woche mit ihren sieben Tagesraetseln.
+final weekStatusProvider = FutureProvider<WeekStatus>((ref) =>
+    readWeekStatus(ref.watch(storeProvider), ref.watch(todayProvider)));
+
 /// Der Spielstand der laufenden Runde.
 final gameControllerProvider =
     NotifierProvider<GameController, GameState>(GameController.new);

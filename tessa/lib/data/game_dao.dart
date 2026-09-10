@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../domain/model/board.dart';
 import '../domain/model/game_state.dart';
 import '../domain/model/hand.dart';
+import '../domain/model/piece.dart';
 import '../domain/model/piece_catalog.dart';
 import '../domain/rules/game_over.dart';
 import 'database.dart';
@@ -34,8 +35,20 @@ Hand decodeHand(String text) {
     throw FormatException('Hand braucht ${Hand.slotCount} Eintraege', text);
   }
   return Hand([
-    for (final part in parts) part.isEmpty ? null : PieceCatalog.byId(part),
+    for (final part in parts) part.isEmpty ? null : _pieceFromId(part),
   ]);
+}
+
+/// Loest eine Kennung auf, auch mit Drehstufe: 'line3h@1' ist das einmal
+/// gedrehte Teil aus dem Katalog.
+Piece _pieceFromId(String id) {
+  final teile = id.split('@');
+  var piece = PieceCatalog.byId(teile.first);
+  final stufe = teile.length > 1 ? int.tryParse(teile[1]) ?? 0 : 0;
+  for (var i = 0; i < stufe; i++) {
+    piece = piece.rotated();
+  }
+  return piece;
 }
 
 /// Sichert die laufende Partie und holt sie zurueck.
