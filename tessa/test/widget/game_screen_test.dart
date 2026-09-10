@@ -12,6 +12,7 @@ import 'package:tessa/application/providers.dart';
 import 'package:tessa/domain/model/board.dart';
 import 'package:tessa/domain/model/game_state.dart';
 import 'package:tessa/domain/model/hand.dart';
+import 'package:tessa/domain/model/piece.dart';
 import 'package:tessa/domain/model/piece_catalog.dart';
 import 'package:tessa/domain/rules/placement.dart';
 import 'package:tessa/ui/widgets/board_view.dart';
@@ -87,6 +88,30 @@ Future<void> tapKey(WidgetTester tester, Key key) async {
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
   await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
+/// Zieht das Teil aus [slot] per echter Geste auf den Anker ([ax], [ay]).
+Future<void> ziehe(
+  WidgetTester tester, {
+  required int slot,
+  required Piece piece,
+  required int ax,
+  required int ay,
+}) async {
+  final cell = tester.widget<BoardView>(find.byType(BoardView)).cellSize;
+  final boardTopLeft = tester.getTopLeft(find.byType(BoardView));
+  final ziel = boardTopLeft +
+      Offset(ax * cell, ay * cell) +
+      pieceDragAnchor(piece, cell);
+
+  final geste = await tester.startGesture(
+    tester.getCenter(find.byKey(Key('tray-$slot'))),
+  );
+  await tester.pump(const Duration(milliseconds: 50));
+  await geste.moveTo(ziel);
+  await tester.pump();
+  await geste.up();
   await tester.pumpAndSettle();
 }
 
@@ -539,5 +564,69 @@ void main() {
 
     expect(find.byKey(const Key('best-for-code')), findsOneWidget);
     expect(find.textContaining('noch 600'), findsOneWidget);
+  });
+  testWidgets('ein Teil laesst sich in der untersten Reihe ablegen',
+      (tester) async {
+    final container = await pumpGame(
+      tester,
+      state: stateWith(
+        board: Board.empty(),
+        hand: Hand.of([square, dot, dot]),
+      ),
+    );
+
+    // Anker (3,6) belegt die Zeilen 6 und 7 — die unterste Reihe.
+    await ziehe(tester, slot: 0, piece: square, ax: 3, ay: 6);
+
+    final board = container.read(gameControllerProvider).board;
+    expect(board.isFilled(3, 7), isTrue,
+        reason: 'die unterste Reihe muss erreichbar sein');
+    expect(board.isFilled(4, 7), isTrue);
+    expect(board.isFilled(3, 6), isTrue);
+  });
+
+  // Je Ecke ein eigener Test: nach einer Ablage ist der Handplatz leer, ein
+  // zweiter Zug im selben Baum ginge ins Leere.
+  for (final ecke in const [
+    [0, 0],
+    [7, 0],
+    [0, 7],
+    [7, 7],
+  ]) {
+    testWidgets('die Ecke (${ecke[0]},${ecke[1]}) ist erreichbar',
+        (tester) async {
+      final container = await pumpGame(
+        tester,
+        state: stateWith(
+          board: Board.empty(),
+          hand: Hand.of([dot, dot, dot]),
+        ),
+      );
+
+      await ziehe(tester, slot: 0, piece: dot, ax: ecke[0], ay: ecke[1]);
+
+      expect(
+        container.read(gameControllerProvider).board.isFilled(ecke[0], ecke[1]),
+        isTrue,
+      );
+    });
+  }
+
+  testWidgets('auch ein hohes Teil kommt bis nach unten', (tester) async {
+    final line5v = PieceCatalog.byId('line5v');
+    final container = await pumpGame(
+      tester,
+      state: stateWith(
+        board: Board.empty(),
+        hand: Hand.of([line5v, dot, dot]),
+      ),
+    );
+
+    // Hoehe 5, unterste moegliche Ankerzeile ist 3.
+    await ziehe(tester, slot: 0, piece: line5v, ax: 2, ay: 3);
+
+    final board = container.read(gameControllerProvider).board;
+    expect(board.isFilled(2, 7), isTrue);
+    expect(board.isFilled(2, 3), isTrue);
   });
 }

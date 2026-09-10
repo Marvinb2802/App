@@ -64,6 +64,7 @@ class PieceTray extends ConsumerWidget {
       key: Key('tray-$slot'),
       data: slot,
       dragAnchorStrategy: (_, _, _) => pieceDragAnchor(piece, boardCellSize),
+      feedbackOffset: pieceHitOffset(piece, boardCellSize),
       feedback: PieceView(piece: piece, cellSize: boardCellSize),
       childWhenDragging:
           PieceView(piece: piece, cellSize: trayCellSize, opacity: 0.25),

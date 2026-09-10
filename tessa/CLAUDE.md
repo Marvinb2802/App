@@ -291,6 +291,13 @@ Reine Dart-Tests, die Vibration auslösen, brauchen
 `TestWidgetsFlutterBinding.ensureInitialized()` — sonst fehlt der
 Plattformkanal.
 
+Flutter sucht das Abwurfziel eines `Draggable` **an der Fingerposition**, nicht
+dort, wo das gezogene Teil liegt (`drag_target.dart`, `hitTestInView`). Schwebt
+das Teil versetzt über dem Finger, muss `feedbackOffset` den Trefferpunkt
+mitziehen — sonst sind Ränder unerreichbar. Genau das war der Fall: die unterste
+Brettreihe ließ sich mit keinem Teil belegen, weil der Finger dabei unter dem
+Brett lag. Gesten-Tests gehören deshalb an die Ränder, nicht in die Mitte.
+
 Beim Prüfen von Animationen im Test: `Matrix4.getMaxScaleOnAxis()` nimmt die
 Z-Achse mit, die bei `Transform.scale` immer 1 bleibt — Werte unter 1 sind
 damit nicht messbar. Der tatsächliche Faktor steht in `transform.entry(0, 0)`.

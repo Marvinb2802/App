@@ -17,6 +17,15 @@ Offset pieceDragAnchor(Piece piece, double cellSize) => Offset(
       piece.height * cellSize + cellSize * 0.6,
     );
 
+/// Verschiebt den Punkt, an dem Flutter das Abwurfziel sucht, vom Finger in
+/// die Mitte des gezogenen Teils.
+///
+/// Flutter sucht das Ziel an der Fingerposition. Da das Teil ueber dem Finger
+/// schwebt, laege dieser Punkt beim Ablegen am unteren Rand ausserhalb des
+/// Bretts — die unterste Reihe waere mit keinem Teil erreichbar.
+Offset pieceHitOffset(Piece piece, double cellSize) =>
+    Offset(0, -(piece.height * cellSize / 2 + cellSize * 0.6));
+
 /// Das Spielbrett samt Vorschau und Abwurfziel.
 class BoardView extends ConsumerStatefulWidget {
   const BoardView({super.key, required this.cellSize});
