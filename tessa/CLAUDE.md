@@ -116,7 +116,8 @@ tessa/
 │  │  ├─ score_dao.dart            Bestenliste mit Seed je Runde
 │  │  └─ settings_repository.dart  Einstellungen als Schlüssel-Wert-Paare
 │  ├─ ui/
-│  │  ├─ screens/                  game_screen samt Abschlussanzeige
+│  │  ├─ screens/                  game_screen samt Abschlussanzeige,
+│  │  │                            scores_screen mit der Bestenliste
 │  │  ├─ widgets/                  board_view, piece_tray, piece_view,
 │  │  │                            cell_tile, score_bar
 │  │  └─ theme/                    Farben, Maße, Animationsdauern
@@ -148,5 +149,24 @@ tessa/
   und `databaseProvider` ist ohne Datenbank schlicht null.
 - Der Undo-Verlauf wird nicht mitgesichert: nach einem Neustart der App gibt es
   nichts zurückzunehmen, die Zahl der Versuche bleibt aber erhalten.
-- Noch offen: Animationen beim Auflösen, Startbildschirm, eine Ansicht für die
-  Bestenliste, Anzeige der gefallenen Linien.
+- Die Bestenliste ist sichtbar: erreichbar aus der Punkteleiste und von der
+  Abschlussanzeige, mit Seed und Datum je Runde. Jeder Eintrag lässt sich mit
+  seinem Seed noch einmal spielen.
+- Noch offen: Animationen beim Auflösen, Startbildschirm, Anzeige der
+  gefallenen Linien.
+
+## Tests
+
+`flutter test` deckt alle vier Schichten ab. Drei Tests sind Wächter — sie
+sollen anschlagen, wenn eine Regel dieses Dokuments verletzt wird, und wurden
+jeweils gegen eine absichtlich eingebaute Verletzung geprüft:
+
+- `test/domain/fairness_guard_test.dart` hält `generation/` frei von Uhr,
+  System, Flutter und jedem Paketimport.
+- `piece_sequence_test.dart` hält eine bekannte Sequenz fest: ändert sich diese
+  Liste, ändert sich für alle Spielenden die Steinsequenz.
+- `game_screen_test.dart` prüft die Punkteleiste auf einem schmalen Gerät mit
+  größtmöglichem Seed auf Überlauf.
+
+Widget-Tests gegen die Datenbank brauchen `databaseFactoryFfiNoIsolate` —
+nur so laufen die Futures in der künstlichen Zeit eines Widget-Tests zu Ende.

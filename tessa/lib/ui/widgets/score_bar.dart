@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../screens/scores_screen.dart';
 
 /// Punkte, Combo, Undo — und der Seed der Runde.
 ///
@@ -20,7 +21,9 @@ class ScoreBar extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Column(
+          // Nachgiebig, damit ein langer Seed die Leiste nicht sprengt.
+          Flexible(
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -33,11 +36,14 @@ class ScoreBar extends ConsumerWidget {
               Text(
                 'Seed ${state.seed}',
                 key: const Key('seed'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
+            ),
           ),
           const Spacer(),
           if (state.combo > 1)
@@ -49,18 +55,25 @@ class ScoreBar extends ConsumerWidget {
                 visualDensity: VisualDensity.compact,
               ),
             ),
-          IconButton(
-            key: const Key('undo'),
-            onPressed: state.canUndo
-                ? () => ref.read(gameControllerProvider.notifier).undo()
-                : null,
-            icon: const Icon(Icons.undo),
-            tooltip: 'Zug zurueck (${state.undosLeft} uebrig)',
-          ),
-          Text(
-            '${state.undosLeft}',
+          Badge.count(
             key: const Key('undos-left'),
-            style: theme.textTheme.labelLarge,
+            count: state.undosLeft,
+            child: IconButton(
+              key: const Key('undo'),
+              onPressed: state.canUndo
+                  ? () => ref.read(gameControllerProvider.notifier).undo()
+                  : null,
+              icon: const Icon(Icons.undo),
+              tooltip: 'Zug zurück (${state.undosLeft} übrig)',
+            ),
+          ),
+          IconButton(
+            key: const Key('open-scores'),
+            icon: const Icon(Icons.leaderboard_outlined),
+            tooltip: 'Bestenliste',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const ScoresScreen()),
+            ),
           ),
         ],
       ),

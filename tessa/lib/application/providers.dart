@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
+import '../data/score_dao.dart';
 import '../domain/model/game_state.dart';
 import '../domain/rules/placement.dart';
 import 'drag_controller.dart';
@@ -37,6 +38,20 @@ final gameControllerProvider =
 /// Der laufende Zieh-Vorgang.
 final dragControllerProvider =
     NotifierProvider<DragController, DragState>(DragController.new);
+
+/// Die besten Runden. Ohne Datenbank bleibt die Liste leer.
+final topScoresProvider = FutureProvider<List<ScoreEntry>>((ref) async {
+  final database = ref.watch(databaseProvider);
+  if (database == null) return const [];
+  return database.scores.top();
+});
+
+/// Die hoechste je erreichte Punktzahl.
+final bestScoreProvider = FutureProvider<int>((ref) async {
+  final database = ref.watch(databaseProvider);
+  if (database == null) return 0;
+  return database.scores.best();
+});
 
 /// Was waehrend des Ziehens auf dem Brett angezeigt wird.
 final dragPreviewProvider = Provider<DragPreview>((ref) {

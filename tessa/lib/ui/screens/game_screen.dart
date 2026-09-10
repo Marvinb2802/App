@@ -8,6 +8,7 @@ import '../../domain/model/board.dart';
 import '../widgets/board_view.dart';
 import '../widgets/piece_tray.dart';
 import '../widgets/score_bar.dart';
+import 'scores_screen.dart';
 
 class GameScreen extends ConsumerWidget {
   const GameScreen({super.key});
@@ -91,6 +92,15 @@ class _GameOverOverlay extends ConsumerWidget {
                     key: const Key('replay'),
                     onPressed: controller.replay,
                     child: const Text('Dieselbe Runde noch einmal'),
+                  ),
+                  TextButton(
+                    key: const Key('scores-from-game-over'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ScoresScreen(),
+                      ),
+                    ),
+                    child: const Text('Bestenliste'),
                   ),
                 ],
               ),

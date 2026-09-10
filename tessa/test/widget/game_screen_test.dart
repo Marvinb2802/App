@@ -49,9 +49,10 @@ GameState stateWith({
   int combo = 1,
   int undosLeft = GameState.undosPerRound,
   bool isOver = false,
+  int seed = 4711,
 }) =>
     GameState(
-      seed: 4711,
+      seed: seed,
       handIndex: 0,
       board: board,
       hand: hand,
@@ -218,5 +219,33 @@ void main() {
     expect(container.read(gameControllerProvider), same(before));
     expect(find.byKey(const Key('tray-0')), findsOneWidget);
     expect(container.read(dragControllerProvider).isActive, isFalse);
+  });
+  testWidgets('die Leiste laeuft auf einem schmalen Geraet nicht ueber',
+      (tester) async {
+    // Kleines Telefon, dazu alles gleichzeitig sichtbar: lange Punktzahl,
+    // groesstmoeglicher Seed, Combo-Anzeige, Undo und Bestenliste.
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await pumpGame(
+      tester,
+      state: stateWith(
+        board: Board.empty(),
+        hand: Hand.of([dot, dot, dot]),
+        score: 1234567,
+        combo: 9,
+        seed: 4294967295,
+      ),
+    );
+
+    // Ein Ueberlauf meldet sich in Flutter als Fehler und laesst den Test
+    // scheitern; hier zaehlt, dass alles gezeichnet wird.
+    expect(find.byKey(const Key('score')), findsOneWidget);
+    expect(find.byKey(const Key('combo')), findsOneWidget);
+    expect(find.byKey(const Key('undo')), findsOneWidget);
+    expect(find.byKey(const Key('open-scores')), findsOneWidget);
+    expect(find.byType(BoardView), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

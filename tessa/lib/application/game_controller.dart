@@ -67,6 +67,8 @@ class GameController extends Notifier<GameState> {
       if (snapshot.isOver) {
         await database.scores.add(score: snapshot.score, seed: snapshot.seed);
         await database.games.clear();
+        ref.invalidate(topScoresProvider);
+        ref.invalidate(bestScoreProvider);
       } else {
         await database.games.save(snapshot);
       }
