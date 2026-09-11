@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../application/sound.dart';
 import '../format.dart';
+import 'legal_screen.dart';
 
 /// Zahlen zur eigenen Spielweise, dazu die Einstellungen.
 class StatsScreen extends ConsumerWidget {
@@ -22,9 +23,13 @@ class StatsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Statistik')),
-      body: ListView(
+      // Bewusst keine ListView: sie baut nur, was gerade sichtbar ist — die
+      // unteren Eintraege fehlten sonst im Baum und in den Tests.
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           _Zeile(
             key: const Key('stat-rounds'),
             label: 'Gespielte Runden',
@@ -83,6 +88,17 @@ class StatsScreen extends ConsumerWidget {
             onChanged:
                 kIsWeb ? null : (_) => ref.read(hapticsProvider.notifier).toggle(),
           ),
+          const Divider(height: 32),
+          ListTile(
+            key: const Key('open-legal'),
+            leading: const Icon(Icons.gavel_rounded),
+            title: const Text('Rechtliches'),
+            subtitle: const Text('Impressum, Datenschutz, AGB, Widerruf'),
+            trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const LegalScreen()),
+            ),
+          ),
           if (totals.rounds == 0)
             const Padding(
               padding: EdgeInsets.only(top: 24),
@@ -92,7 +108,8 @@ class StatsScreen extends ConsumerWidget {
                 textAlign: TextAlign.center,
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

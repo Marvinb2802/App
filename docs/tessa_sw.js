@@ -2,7 +2,7 @@
 //
 // Legt beim ersten Besuch alles ab und liefert danach aus dem Speicher. Damit
 // laeuft Tessa auch ohne Verbindung, etwa vom Startbildschirm des Telefons.
-const VERSION = '625989de53d2';
+const VERSION = '52f10795e415';
 const SPEICHER = 'tessa-' + VERSION;
 const DATEIEN = [
   './',
@@ -11,6 +11,11 @@ const DATEIEN = [
   'assets/AssetManifest.bin.json',
   'assets/FontManifest.json',
   'assets/NOTICES',
+  'assets/assets/legal/agb.md',
+  'assets/assets/legal/betreiber.json',
+  'assets/assets/legal/datenschutz.md',
+  'assets/assets/legal/impressum.md',
+  'assets/assets/legal/widerruf.md',
   'assets/assets/sounds/clear1.wav',
   'assets/assets/sounds/clear2.wav',
   'assets/assets/sounds/clear3.wav',

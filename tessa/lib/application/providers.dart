@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/score_dao.dart';
@@ -7,6 +8,7 @@ import '../data/purchases.dart';
 import '../data/store.dart';
 import '../domain/model/game_state.dart';
 import '../domain/rules/placement.dart';
+import '../ui/legal/legal_repository.dart';
 import 'daily.dart';
 import 'drag_controller.dart';
 import 'game_controller.dart';
@@ -43,6 +45,18 @@ final paidOffersProvider = FutureProvider<List<PricedItem>>(
 
 /// Eine beim Start geladene, noch offene Partie.
 final restoredGameProvider = Provider<GameState?>((ref) => null);
+
+/// Die Rechtstexte aus den Anhaengen der App.
+final legalRepositoryProvider =
+    Provider<LegalRepository>((ref) => LegalRepository(rootBundle));
+
+/// Die Angaben des Anbieters — eine Quelle fuer App und Webseite.
+final betreiberProvider = FutureProvider<Betreiber>(
+    (ref) => ref.watch(legalRepositoryProvider).betreiber());
+
+/// Ein einzelner Rechtstext, mit eingesetzten Angaben.
+final legalTextProvider = FutureProvider.family<String, LegalDoc>(
+    (ref, doc) => ref.watch(legalRepositoryProvider).text(doc));
 
 /// Das heutige Datum. Als Provider, damit Tests einen festen Tag setzen koennen.
 final todayProvider = Provider<DateTime>((ref) => DateTime.now());

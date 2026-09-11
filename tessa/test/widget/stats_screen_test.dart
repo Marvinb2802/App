@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tessa/application/daily.dart';
 import 'package:tessa/application/providers.dart';
 import 'package:tessa/data/prefs_store.dart';
+import 'package:tessa/ui/legal/legal_repository.dart';
+import 'package:tessa/ui/screens/legal_screen.dart';
 import 'package:tessa/ui/screens/stats_screen.dart';
 import 'package:tessa/ui/theme/tessa_theme.dart';
 
@@ -89,5 +91,18 @@ void main() {
     expect(container.read(hapticsProvider), isFalse);
     expect(await store.readSetting('haptics'), '0',
         reason: 'die Einstellung ueberlebt den Neustart');
+  });
+
+  testWidgets('fuehrt zu den Rechtstexten', (tester) async {
+    await pumpStats(tester);
+
+    await tester.scrollUntilVisible(find.byKey(const Key('open-legal')), 200);
+    await tester.tap(find.byKey(const Key('open-legal')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LegalScreen), findsOneWidget);
+    for (final doc in LegalDoc.values) {
+      expect(find.byKey(Key('legal-${doc.name}')), findsOneWidget);
+    }
   });
 }

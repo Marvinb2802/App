@@ -22,7 +22,8 @@ python3 tool/make_web.py
 ```
 
 `make_web.py` dünnt CanvasKit aus, erzeugt den Service Worker mit der
-Dateiliste fürs Offline-Spielen und setzt `.nojekyll`.
+Dateiliste fürs Offline-Spielen, legt die Rechtstexte als Webseiten unter
+`docs/legal/` ab und setzt `.nojekyll`.
 
 ## Auf dem eigenen Rechner starten
 
@@ -65,6 +66,30 @@ den App Store braucht es ein Entwicklerprogramm.
 flutter test      # alle Tests
 flutter analyze   # statische Prüfung
 ```
+
+## Rechtstexte
+
+Impressum, Datenschutz, AGB und Widerruf liegen als Markdown in
+`assets/legal/`. Sie erscheinen in der App unter **Statistik → Rechtliches**
+und — sobald die Angaben stehen — als Webseiten unter `docs/legal/`.
+
+Vor einer Veröffentlichung:
+
+1. `assets/legal/betreiber.json` ausfüllen. Alles in eckigen Klammern ist ein
+   Platzhalter; solange einer übrig ist, zeigt die App einen Warnhinweis und
+   `make_web.py` legt `docs/legal/` nicht an.
+2. Die Texte prüfen lassen. Es sind Vorlagen, keine Rechtsberatung.
+3. Web-Fassung neu bauen. Die Adressen für die Store-Formulare lauten dann:
+
+   ```
+   https://marvinb2802.github.io/App/legal/datenschutz.html
+   https://marvinb2802.github.io/App/legal/impressum.html
+   https://marvinb2802.github.io/App/legal/agb.html
+   https://marvinb2802.github.io/App/legal/widerruf.html
+   ```
+
+Apple und Google verlangen eine öffentlich erreichbare Datenschutzerklärung
+als Adresse — ein Text nur in der App genügt dort nicht.
 
 ## Kennungen
 

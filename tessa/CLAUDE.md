@@ -178,8 +178,9 @@ lassen:
   Play Console angelegt und freigegeben werden.
 - Digitale Güter müssen über das Bezahlsystem der Plattform laufen; ein
   eigener Bezahlweg ist dort nicht zulässig.
-- Rechtlich fehlen Impressum, AGB, Datenschutzerklärung und
-  Widerrufsbelehrung; beim Verkauf kommen Gewerbe und Steuer dazu.
+- Impressum, AGB, Datenschutzerklärung und Widerrufsbelehrung stehen als
+  Vorlagen bereit (siehe „Rechtstexte"), sind aber weder ausgefüllt noch
+  geprüft; beim Verkauf kommen Gewerbe und Steuer dazu.
 - Im Browser gibt es keine Käufe — dort meldet die Oberfläche das offen.
 
 Getestet ist der Ablauf gegen eine Attrappe, nicht gegen einen echten Store.
@@ -187,8 +188,8 @@ Getestet ist der Ablauf gegen eine Attrappe, nicht gegen einen echten Store.
 ## Web-Fassung und Offline
 
 Ausgeliefert wird aus `docs/` über GitHub Pages. Der Ablauf steht in
-`README.md`; `tool/make_web.py` erledigt dabei drei Dinge, die der Flutter-Build
-nicht abnimmt:
+`README.md`; `tool/make_web.py` erledigt dabei vier Dinge, die der
+Flutter-Build nicht abnimmt:
 
 - **CanvasKit ausdünnen.** Der Build legt jede Renderer-Variante ab (37 MB).
   Bei `renderer: canvaskit` wird nur CanvasKit selbst und die Chromium-Fassung
@@ -198,6 +199,8 @@ nicht abnimmt:
   kein Offline-Spielen. Der erzeugte Worker legt beim ersten Besuch alles ab
   und liefert danach aus dem Speicher; seine Version ist ein Fingerabdruck über
   alle Dateien, damit eine neue Fassung die alte sicher ablöst.
+- **Die Rechtstexte als Webseiten ablegen** (`docs/legal/`), aus denselben
+  Dateien, die auch die App anzeigt.
 - **`.nojekyll`** setzen.
 
 CanvasKit liegt bewusst lokal im Repo (14 MB) statt von Googles CDN zu kommen:
@@ -223,6 +226,34 @@ Eintrag auf dem Telefon wäre nutzlos.
   Xcode. `flutter build apk` und `flutter build ipa` sind hier nie gelaufen —
   die Anleitung dazu steht in `README.md`, der erste echte Build muss auf einem
   Rechner mit Werkzeugkette stattfinden.
+
+## Rechtstexte
+
+Impressum, Datenschutzerklärung, AGB und Widerrufsbelehrung liegen als
+Markdown in `assets/legal/` und erscheinen an **zwei** Stellen: in der App
+(Statistik → Rechtliches) und als Webseiten unter `docs/legal/`. Die Stores
+verlangen eine öffentlich erreichbare Datenschutzerklärung als Adresse — ein
+Text nur in der App genügt dort nicht.
+
+- **Eine Quelle für die Angaben:** `assets/legal/betreiber.json`. Name,
+  Anschrift und E-Mail stehen genau einmal da und werden über Platzhalter
+  (`{{name}}`, `{{ort}}`, …) in alle vier Texte eingesetzt. Der Satz zur
+  Umsatzsteuer richtet sich danach, ob eine USt-IdNr. eingetragen ist
+  (sonst: Kleinunternehmer nach § 19 UStG).
+- **Noch nicht ausgefüllt.** Solange irgendwo eine eckige Klammer steht, gilt
+  `Betreiber.istAusgefuellt` als falsch: die App zeigt einen Warnhinweis, und
+  `tool/make_web.py` legt `docs/legal/` gar nicht erst an. Ein öffentliches
+  Impressum mit „[DEIN VOLLER NAME]" wäre schlimmer als keins.
+- **Die Texte sind Vorlagen, keine Rechtsberatung.** Vor einer
+  Veröffentlichung gehören sie geprüft — besonders AGB und Widerruf, sobald
+  wirklich verkauft wird.
+- **Eigener kleiner Markdown-Leser** (`lib/ui/legal/markdown.dart`), weil ein
+  ganzes Paket für vier Texte zu viel Gepäck wäre. Absätze werden
+  zusammengezogen: die Umbrüche im Quelltext sitzen bei 80 Zeichen und haben in
+  der Anzeige nichts verloren. Ein Rückstrich am Zeilenende hält einen Umbruch
+  — so behalten Anschriften ihre Form. Dieselben Regeln stehen ein zweites Mal
+  in `tool/make_web.py`; `legal_markdown_test.dart` und die Seiten in
+  `docs/legal/` sind die Probe, dass beide Fassungen dasselbe tun.
 
 ## Technik
 
@@ -396,10 +427,19 @@ erst beim ersten gelegten Teil anfängt, ist zu spät — dann bleibt es stumm.
 Plattformkanal, den es im Web nicht gibt; iOS-Safari kennt überhaupt keine
 Vibrations-Schnittstelle. Die Einstellung ist dort abgeblendet und beschriftet.
 
-Der Startbildschirm ist bewusst **keine `ListView`**: sie baut nur, was gerade
-sichtbar ist, und Tests fanden die unteren Einträge nicht. Für eine kurze Seite
+Der Startbildschirm und die Statistik sind bewusst **keine `ListView`**: die
+baut nur, was gerade sichtbar ist, und Tests fanden die unteren Einträge
+nicht. Für eine kurze Seite
 ist `SingleChildScrollView` + `Column` richtig — alles steht sofort im Baum,
-auch für Vorlesefunktionen.
+auch für Vorlesefunktionen. Bei der Statistik ist genau das passiert: der neue
+Eintrag „Rechtliches" schob den Schlusshinweis aus dem Sichtfeld, und ein
+bestehender Test fand ihn nicht mehr.
+
+`rootBundle` gehört nicht in einen Widget-Test: einen Anhang zu laden ist
+echte Ein-/Ausgabe und kommt in der künstlichen Zeit eines Widget-Tests nie
+zurück — der Test bleibt hängen, ohne Fehlermeldung. Tests, die die
+ausgelieferten Rechtstexte prüfen, lesen sie deshalb über
+`test/support/legal_vorlagen.dart` von der Platte. Es sind dieselben Dateien.
 
 Widget-Tests mounten den Bildschirm, um den es geht, direkt in einer
 `MaterialApp` — nicht `TessaApp`, deren Einstieg der Startbildschirm ist.
