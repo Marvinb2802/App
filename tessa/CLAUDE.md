@@ -97,6 +97,16 @@ einer einzelnen Partie.
 - **Zen:** kein Spielende. Geht nichts mehr, kommt die nächste Hand *aus der
   Steinfolge*; hilft auch das nicht, wird die vollste Reihe geräumt. Es wird
   nie neu gewürfelt, und die Rettung gibt keine Punkte.
+- **Hardcore:** der Gegenentwurf zum Tüfteln — **kein Hinweis, kein Zurück,
+  kein Weiterspielen**, auch nicht gekauft. Dazu zwei Verschärfungen, die
+  beide für alle gleich sind: die Teile kommen aus `PieceSet.hardcore` (der
+  Punkt und die kurzen Balken werden selten, sperrige Formen häufig), und vom
+  siebten Zug an fällt **alle drei Züge Geröll** auf ein freies Feld.
+  Ergebnisse gehen in einen **eigenen Bestwert**, nicht in die Bestenliste:
+  die Steinfolge ist eine andere, die Punktzahlen wären nicht vergleichbar.
+  Eine Hardcore-Runde wird **nicht gesichert** — sie läuft in einem Stück. Das
+  ist nicht nur Haltung: beim Fortsetzen stünde der Modus nicht mehr fest, und
+  aus der harten Runde würde eine gewöhnliche mit drei Undo.
 - **Tüfteln:** derselbe Spielcode, aber **unbegrenzt zurück**. Weil der Code
   die ganze Steinfolge festlegt, ist eine Runde ein lösbares Rätsel — dieser
   Modus lädt ein, sie auszureizen. Das ist der eigentliche Vorteil der
@@ -119,6 +129,25 @@ Varianten waren messbar schlechter: verstreute Einzelzellen und ein loser
 Sockel führten bei späten Leveln nach vier Zügen zum Ende — nicht schwer,
 sondern unfair.
 
+**Wie hart Hardcore wirklich ist — gemessen.** Derselbe Automat wie bei den
+Leveln spielt beide Teilesätze. Über 30 Spielcodes: im Grundspiel hält er rund
+139 Züge durch und holt 1.260 Punkte, in Hardcore mit Geröll noch 28 Züge und
+284 Punkte. Den größten Teil davon macht der Teilesatz (35 Züge ohne Geröll),
+das Geröll sorgt dafür, dass auch eine gut laufende Runde ein Ende findet.
+Zwei Tests halten beides fest: Hardcore muss mindestens dreimal kürzer sein als
+das Grundspiel, und der Automat muss über zehn Züge kommen — schwer ist
+gewollt, aussichtslos nicht.
+
+Eine Vorbelegung des Bretts kam nicht dazu: die Messung zeigte, dass sie nur
+noch weiter verkürzt hätte, ohne etwas hinzuzufügen.
+
+**Das Geröll und die Fairness-Garantie.** Die Steinfolge bleibt unberührt — sie
+kommt weiter allein aus Spielcode und Handindex, und `domain/generation/` fasst
+das Geröll nicht an (es liegt in `domain/rules/hardcore.dart`). Wo ein Stein
+landet, hängt vom Spielcode, von der Zugnummer und davon ab, welche Felder frei
+sind. Gleicher Code und gleiche Züge ergeben denselben Verlauf; eine Runde
+bleibt also nachspielbar.
+
 **Tagesziel:** Zusätzlich zur Punktjagd stellt jeder Tag eine Aufgabe (Linien
 in einem Zug, Combo-Stand, Punktzahl). Die Auswahl hängt allein vom Datum ab,
 ist also wie der Spielcode nachrechenbar.
@@ -133,9 +162,10 @@ festgehalten. Beim Spielen steht der Abstand dazu in der Leiste („noch 600"),
 und wer ihn überbietet, sieht es sofort. Erst das macht Tüfteln und das
 Nachspielen messbar — bei zufälliger Steinfolge wäre so ein Vergleich sinnlos.
 
-**Hinweise:** drei je Runde (im Tüftel-Modus unbegrenzt). `findHint` sucht den
-Zug, der die meisten Linien auflöst, bei Gleichstand den zuerst gefundenen —
-derselbe Spielstand ergibt also immer denselben Vorschlag.
+**Hinweise:** drei je Runde — im Tüftel-Modus unbegrenzt, im Hardcore-Modus
+keine. `findHint` sucht den Zug, der die meisten Linien auflöst, bei
+Gleichstand den zuerst gefundenen — derselbe Spielstand ergibt also immer
+denselben Vorschlag.
 
 ## Shop — und wo seine Grenze verläuft
 
@@ -159,6 +189,11 @@ Die verbliebene Grenze, und warum sie bleibt:
   davon leben, dass derselbe Spielcode bei allen dieselben Teile liefert.
 - Dauerhaft freischalten darf ein Kauf nur Aussehen; alles andere ist
   Verbrauchsgut.
+- **Im Hardcore-Modus wirkt gar kein Kauf.** Hinweise und Zurück-Züge lassen
+  sich zwar kaufen, bleiben dort aber wirkungslos, und Weiterspielen gibt es
+  nicht. Sonst wäre der Modus mit Sternen aushebelbar — und damit keiner.
+  `allowsHelp(mode)` ist die eine Stelle, an der diese Zusage hängt;
+  `hardcore_test.dart` prüft sie gegen jeden Modus.
 - Zwei Wächtertests (`shop_test.dart`, `paid_purchase_test.dart`) schlagen an,
   sobald ein Angebot anders wirkt als hier beschrieben.
 

@@ -14,9 +14,14 @@ import 'seeded_random.dart';
 /// jeder Zugang zum Spielstand, zur Uhr und zum System — und das soll so
 /// bleiben. test/domain/fairness_guard_test.dart wacht darueber.
 class PieceSequence {
-  const PieceSequence(this.seed);
+  const PieceSequence(this.seed, {this.set = PieceSet.standard});
 
   final int seed;
+
+  /// Welcher Satz Gewichte gezogen wird. Er gehoert zur Runde wie der Seed:
+  /// derselbe Code liefert im Hardcore-Modus eine andere — und zwar fuer alle
+  /// dieselbe — Folge als im Grundspiel.
+  final PieceSet set;
 
   /// Die [index]-te Hand der Runde. Gleicher Seed und gleicher Index ergeben
   /// immer dieselben drei Teile.
@@ -35,14 +40,14 @@ class PieceSequence {
     ]);
   }
 
-  /// Zieht ein Teil gemaess der Gewichte im Katalog.
+  /// Zieht ein Teil gemaess der Gewichte des gewaehlten Satzes.
   Piece _drawPiece(SeededRandom random) {
-    var roll = random.nextIntBelow(PieceCatalog.totalWeight);
-    for (final entry in PieceCatalog.entries) {
+    var roll = random.nextIntBelow(PieceCatalog.totalWeightFor(set));
+    for (final entry in PieceCatalog.entriesFor(set)) {
       roll -= entry.weight;
       if (roll < 0) return entry.piece;
     }
-    // Unerreichbar: die Gewichte summieren sich zu totalWeight.
-    return PieceCatalog.entries.last.piece;
+    // Unerreichbar: die Gewichte summieren sich zum Gesamtgewicht.
+    return PieceCatalog.entriesFor(set).last.piece;
   }
 }

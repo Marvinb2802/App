@@ -2,7 +2,7 @@
 //
 // Legt beim ersten Besuch alles ab und liefert danach aus dem Speicher. Damit
 // laeuft Tessa auch ohne Verbindung, etwa vom Startbildschirm des Telefons.
-const VERSION = '52f10795e415';
+const VERSION = '50287ab46170';
 const SPEICHER = 'tessa-' + VERSION;
 const DATEIEN = [
   './',

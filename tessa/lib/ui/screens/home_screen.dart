@@ -24,6 +24,7 @@ class HomeScreen extends ConsumerWidget {
     final best = ref.watch(bestScoreProvider).value ?? 0;
     final daily = ref.watch(dailyStatusProvider).value;
     final geschaffteLevel = ref.watch(levelProgressProvider).value ?? 0;
+    final hardcoreBest = ref.watch(hardcoreBestProvider).value ?? 0;
     final theme = Theme.of(context);
 
     // Eine Runde läuft, wenn schon etwas auf dem Brett steht.
@@ -85,6 +86,18 @@ class HomeScreen extends ConsumerWidget {
                         erklaerung: 'Zufälliger Spielcode, drei Undo, '
                             'bis nichts mehr passt.',
                         onTap: () => _start(context, ref, GameMode.normal),
+                      ),
+                      _Spielart(
+                        schluessel: 'hardcore',
+                        symbol: Icons.whatshot_rounded,
+                        name: 'Hardcore',
+                        erklaerung: hardcoreBest > 0
+                            ? 'Kein Hinweis, kein Zurück, sperrige Teile, '
+                                'Geröll. Bestwert ${zahl(hardcoreBest)}.'
+                            : 'Kein Hinweis, kein Zurück, kein Weiterspielen. '
+                                'Sperrigere Teile — und alle drei Züge fällt '
+                                'Geröll.',
+                        onTap: () => _start(context, ref, GameMode.hardcore),
                       ),
                       _Spielart(
                         schluessel: 'zen',

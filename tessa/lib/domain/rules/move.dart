@@ -1,18 +1,22 @@
 import '../generation/piece_sequence.dart';
 import '../model/board.dart';
 import '../model/game_state.dart';
+import '../model/piece_catalog.dart';
 import 'clearing.dart';
 import 'game_over.dart';
 import 'placement.dart';
 import 'scoring.dart';
 
 /// Startet eine Runde mit [seed].
-GameState startGame(int seed) {
+///
+/// [pieces] waehlt den Satz Gewichte: das Grundspiel oder Hardcore.
+GameState startGame(int seed, {PieceSet pieces = PieceSet.standard}) {
   return GameState(
     seed: seed,
     handIndex: 0,
     board: Board.empty(),
-    hand: PieceSequence(seed).handAt(0),
+    hand: PieceSequence(seed, set: pieces).handAt(0),
+    pieces: pieces,
     score: 0,
     combo: minCombo,
     undosLeft: GameState.undosPerRound,
@@ -51,7 +55,7 @@ GameState applyMove(
   // Nachschub erst, wenn alle drei Teile platziert sind.
   if (hand.isEmpty) {
     handIndex += 1;
-    hand = PieceSequence(state.seed).handAt(handIndex);
+    hand = PieceSequence(state.seed, set: state.pieces).handAt(handIndex);
   }
 
   return state.copyWith(

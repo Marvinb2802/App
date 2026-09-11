@@ -22,6 +22,9 @@ class ScoreBar extends ConsumerWidget {
     final hints = ref.watch(hintProvider);
     final theme = Theme.of(context);
     final unbegrenzt = mode == GameMode.practice;
+    // Hardcore: keine Hilfe. Die beiden Knoepfe verschwinden ganz, statt
+    // abgeblendet Hoffnung zu machen.
+    final mitHilfe = allowsHelp(mode);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
@@ -59,31 +62,39 @@ class ScoreBar extends ConsumerWidget {
                   ],
                 ),
               ),
-              IconButton(
-                key: const Key('hint'),
-                icon: const Icon(Icons.lightbulb_outline_rounded),
-                tooltip: unbegrenzt
-                    ? 'Hinweis'
-                    : 'Hinweis (${hints.left} übrig)',
-                onPressed: (unbegrenzt || hints.canAsk) && !state.isOver
-                    ? () => ref.read(hintProvider.notifier).request()
-                    : null,
-              ),
-              Badge.count(
-                key: const Key('undos-left'),
-                count: unbegrenzt ? 99 : state.undosLeft,
-                isLabelVisible: !unbegrenzt,
-                child: IconButton(
-                  key: const Key('undo'),
-                  onPressed: (unbegrenzt || state.canUndo)
-                      ? () => ref.read(gameControllerProvider.notifier).undo()
-                      : null,
-                  icon: const Icon(Icons.undo_rounded),
+              if (mitHilfe)
+                IconButton(
+                  key: const Key('hint'),
+                  icon: const Icon(Icons.lightbulb_outline_rounded),
                   tooltip: unbegrenzt
-                      ? 'Zug zurück (unbegrenzt)'
-                      : 'Zug zurück (${state.undosLeft} übrig)',
+                      ? 'Hinweis'
+                      : 'Hinweis (${hints.left} übrig)',
+                  onPressed: (unbegrenzt || hints.canAsk) && !state.isOver
+                      ? () => ref.read(hintProvider.notifier).request()
+                      : null,
                 ),
-              ),
+              if (mitHilfe)
+                Badge.count(
+                  key: const Key('undos-left'),
+                  count: unbegrenzt ? 99 : state.undosLeft,
+                  isLabelVisible: !unbegrenzt,
+                  child: IconButton(
+                    key: const Key('undo'),
+                    onPressed: (unbegrenzt || state.canUndo)
+                        ? () => ref.read(gameControllerProvider.notifier).undo()
+                        : null,
+                    icon: const Icon(Icons.undo_rounded),
+                    tooltip: unbegrenzt
+                        ? 'Zug zurück (unbegrenzt)'
+                        : 'Zug zurück (${state.undosLeft} übrig)',
+                  ),
+                ),
+              if (!mitHilfe)
+                const Padding(
+                  key: Key('hardcore-mark'),
+                  padding: EdgeInsets.only(right: 12),
+                  child: Icon(Icons.whatshot_rounded, color: Color(0xFFFF6B57)),
+                ),
             ],
           ),
           Wrap(
@@ -92,7 +103,10 @@ class ScoreBar extends ConsumerWidget {
             runSpacing: 4,
             children: [
               if (state.combo > 1) _ComboPill(combo: state.combo),
-              _BestPill(seed: state.seed, score: state.score),
+              if (mode == GameMode.hardcore)
+                _HardcorePill(score: state.score)
+              else
+                _BestPill(seed: state.seed, score: state.score),
             ],
           ),
         ],
@@ -106,8 +120,48 @@ class ScoreBar extends ConsumerWidget {
         GameMode.practice => 'Tüfteln · Spielcode $seed',
         GameMode.zen => 'Zen · Spielcode $seed',
         GameMode.rotation => 'Drehen erlaubt · Spielcode $seed',
+        GameMode.hardcore => 'Hardcore · Spielcode $seed',
         GameMode.normal => 'Spielcode $seed',
       };
+}
+
+/// Der eigene Hardcore-Bestwert — die Messlatte dieses Modus.
+///
+/// Hardcore-Runden stehen nicht in der gewoehnlichen Bestenliste: ihre
+/// Steinfolge ist eine andere, die Punktzahlen waeren nicht vergleichbar.
+class _HardcorePill extends ConsumerWidget {
+  const _HardcorePill({required this.score});
+
+  final int score;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final best = ref.watch(hardcoreBestProvider).value ?? 0;
+    final voraus = score > best;
+    final text = best == 0
+        ? 'Hardcore — keine Hilfe'
+        : voraus
+            ? 'Hardcore-Bestwert übertroffen +${zahl(score - best)}'
+            : 'Hardcore-Bestwert ${zahl(best)} · noch ${zahl(best - score)}';
+    final farbe =
+        voraus && best > 0 ? const Color(0xFF3DD6A0) : const Color(0xFFFF6B57);
+
+    return Container(
+      key: const Key('hardcore-best'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: farbe.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: farbe,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
 }
 
 /// Zeigt die eigene Bestleistung mit genau diesem Spielcode — die Messlatte

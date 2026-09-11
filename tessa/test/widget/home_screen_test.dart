@@ -199,6 +199,22 @@ void main() {
     expect(container.read(gameModeProvider), GameMode.practice);
   });
 
+  testWidgets('Hardcore startet ohne Hinweis und ohne Zurueck', (tester) async {
+    final container = await pumpHome(tester);
+
+    await tapKey(tester, const Key('hardcore'));
+
+    expect(find.byType(GameScreen), findsOneWidget);
+    expect(container.read(gameModeProvider), GameMode.hardcore);
+    expect(container.read(gameControllerProvider).pieces, PieceSet.hardcore);
+
+    // Die beiden Knoepfe sind weg, nicht bloss abgeblendet.
+    expect(find.byKey(const Key('hint')), findsNothing);
+    expect(find.byKey(const Key('undo')), findsNothing);
+    expect(find.byKey(const Key('hardcore-mark')), findsOneWidget);
+    expect(find.textContaining('Hardcore'), findsWidgets);
+  });
+
   testWidgets('aus dem Spiel geht es mit dem Zurueck-Knopf zum Start',
       (tester) async {
     await pumpHome(tester);

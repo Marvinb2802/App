@@ -92,6 +92,15 @@ final levelProgressProvider = FutureProvider<int>((ref) async {
   return int.tryParse(await store.readSetting('levels.done') ?? '') ?? 0;
 });
 
+/// Die beste Hardcore-Runde. Hardcore-Runden stehen bewusst nicht in der
+/// gewoehnlichen Bestenliste: dort waere ihre Punktzahl nicht vergleichbar,
+/// weil die Steinfolge eine andere ist.
+final hardcoreBestProvider = FutureProvider<int>((ref) async {
+  final store = ref.watch(storeProvider);
+  if (store == null) return 0;
+  return int.tryParse(await store.readSetting('hardcore.best') ?? '') ?? 0;
+});
+
 /// Der Verlauf der laufenden Runde — fuer Analyse und Tagesziel.
 final roundLogProvider =
     NotifierProvider<RoundLogController, RoundLog>(RoundLogController.new);

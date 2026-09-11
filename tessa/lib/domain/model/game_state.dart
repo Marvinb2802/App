@@ -1,6 +1,7 @@
 import 'board.dart';
 import 'cell.dart';
 import 'hand.dart';
+import 'piece_catalog.dart';
 
 /// Was ein einzelner Zug bewirkt hat. Die Oberflaeche braucht das fuer
 /// Rueckmeldungen ("+240", Combo-Anzeige, Raeum-Animation).
@@ -54,6 +55,7 @@ class GameState {
     required this.combo,
     required this.undosLeft,
     required this.isOver,
+    this.pieces = PieceSet.standard,
     this.lastMove,
   });
 
@@ -71,6 +73,11 @@ class GameState {
   final int combo;
   final int undosLeft;
   final bool isOver;
+
+  /// Aus welchem Satz Gewichte die Steinfolge kommt. Gehoert zur Runde wie der
+  /// Seed: Hardcore zieht dieselben Formen, aber anders haeufig.
+  final PieceSet pieces;
+
   final MoveOutcome? lastMove;
 
   bool get canUndo => undosLeft > 0;
@@ -83,6 +90,7 @@ class GameState {
     int? combo,
     int? undosLeft,
     bool? isOver,
+    PieceSet? pieces,
     MoveOutcome? lastMove,
   }) {
     return GameState(
@@ -94,6 +102,7 @@ class GameState {
       combo: combo ?? this.combo,
       undosLeft: undosLeft ?? this.undosLeft,
       isOver: isOver ?? this.isOver,
+      pieces: pieces ?? this.pieces,
       lastMove: lastMove ?? this.lastMove,
     );
   }

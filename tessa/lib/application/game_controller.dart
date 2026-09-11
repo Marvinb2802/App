@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/store.dart';
 import '../domain/model/game_state.dart';
 import '../domain/model/hand.dart';
 import '../domain/model/level.dart';
+import '../domain/model/piece_catalog.dart';
+import '../domain/rules/hardcore.dart';
 import '../domain/rules/hint.dart';
 import '../domain/rules/move.dart';
 import '../domain/rules/zen.dart';
@@ -34,6 +37,10 @@ class GameController extends Notifier<GameState> {
   /// Im Tueftel-Modus reicht der Verlauf bis zum Anfang zurueck.
   bool get _unlimitedUndo => ref.read(gameModeProvider) == GameMode.practice;
 
+  /// Hardcore: kein Hinweis, kein Zurueck, kein Weiterspielen — auch nicht
+  /// gekauft.
+  bool get _hardcore => ref.read(gameModeProvider) == GameMode.hardcore;
+
   /// Nur zum Pruefen in der Oberflaeche (Vorschau, Abwurfziel).
   bool canPlace(int slot, int x, int y) => canPlaceFromHand(state, slot, x, y);
 
@@ -54,6 +61,7 @@ class GameController extends Notifier<GameState> {
     if (next.isOver && ref.read(gameModeProvider) == GameMode.zen) {
       next = rescue(next);
     }
+    if (_hardcore) next = dropRubble(next, moveNumber: zugnummer);
     state = next;
 
     ref.read(roundLogProvider.notifier).record(MoveRecord(
@@ -143,6 +151,8 @@ class GameController extends Notifier<GameState> {
 
   /// Nimmt den letzten Zug zurueck.
   bool undo() {
+    // Im Hardcore-Modus zaehlt jeder Zug — auch der falsche.
+    if (_hardcore) return false;
     if (_history.isEmpty) return false;
     if (!_unlimitedUndo && !state.canUndo) return false;
     final previous = _history.removeLast();
@@ -156,9 +166,17 @@ class GameController extends Notifier<GameState> {
   }
 
   /// Startet eine neue Runde. Ohne [seed] kommt ein frischer Spielcode.
+  ///
+  /// Der Modus steht dabei schon fest (die Oberflaeche setzt ihn vorher): eine
+  /// Hardcore-Runde zieht aus dem harten Satz und startet ohne Zurueck-Zuege.
   void restart({int? seed}) {
     _history.clear();
-    state = startGame(seed ?? ref.read(seedSourceProvider)());
+    final hardcore = _hardcore;
+    state = startGame(
+      seed ?? ref.read(seedSourceProvider)(),
+      pieces: hardcore ? PieceSet.hardcore : PieceSet.standard,
+    );
+    if (hardcore) state = state.copyWith(undosLeft: 0);
     ref.read(hintProvider.notifier).reset();
     ref.read(roundLogProvider.notifier).reset();
     unawaited(_persist(state));
@@ -183,7 +201,7 @@ class GameController extends Notifier<GameState> {
 
   /// Legt zusaetzliche Zurueck-Zuege nach — aus dem Shop.
   void addUndos(int count) {
-    if (count <= 0) return;
+    if (count <= 0 || _hardcore) return;
     state = state.copyWith(undosLeft: state.undosLeft + count);
   }
 
@@ -193,6 +211,7 @@ class GameController extends Notifier<GameState> {
   /// vollste Reihe geraeumt) — die Steinfolge selbst bleibt die des
   /// Spielcodes. Punkte und Verlauf bleiben erhalten.
   bool revive() {
+    if (_hardcore) return false;
     if (!state.isOver) return false;
     if (!ref.read(shopProvider.notifier).consumeRevive()) return false;
     state = rescueUntilPlayable(state);
@@ -242,6 +261,7 @@ class GameController extends Notifier<GameState> {
     if (ref.read(gameModeProvider) == GameMode.level) return;
     final store = ref.read(storeProvider);
     if (store == null) return;
+    if (_hardcore) return _persistHardcore(store, snapshot);
     try {
       if (!snapshot.isOver) {
         await store.saveGame(snapshot);
@@ -262,6 +282,32 @@ class GameController extends Notifier<GameState> {
       ref.invalidate(totalsProvider);
     } catch (_) {
       // Ein misslungenes Speichern darf die laufende Runde nicht stoppen.
+    }
+  }
+
+  /// Haelt eine Hardcore-Runde fest.
+  ///
+  /// Zwei Unterschiede zur gewoehnlichen Runde, beide mit Absicht:
+  ///
+  /// - Eine laufende Hardcore-Runde wird **nicht** gesichert. Sie laeuft in
+  ///   einem Stueck; wer die App verlaesst, faengt neu an. Sonst waere sie auch
+  ///   leicht auszuhebeln — beim Fortsetzen steht der Modus nicht mehr fest,
+  ///   und aus der harten Runde wuerde eine gewoehnliche mit drei Undo.
+  /// - Das Ergebnis geht **nicht** in die Bestenliste, sondern in einen eigenen
+  ///   Bestwert. Die Steinfolge ist eine andere, die Punktzahlen waeren also
+  ///   nicht vergleichbar.
+  Future<void> _persistHardcore(TessaStore store, GameState snapshot) async {
+    if (!snapshot.isOver) return;
+    try {
+      ref.read(shopProvider.notifier).earn(starsForScore(snapshot.score));
+      final bisher =
+          int.tryParse(await store.readSetting('hardcore.best') ?? '') ?? 0;
+      if (snapshot.score > bisher) {
+        await store.writeSetting('hardcore.best', '${snapshot.score}');
+        ref.invalidate(hardcoreBestProvider);
+      }
+    } catch (_) {
+      // Ein misslungenes Speichern darf die Runde nicht stoppen.
     }
   }
 }

@@ -230,7 +230,11 @@ String shareText({
   required int seed,
   required int streak,
 }) {
-  final kopf = mode == GameMode.daily ? 'Tessa Tagesrätsel' : 'Tessa';
+  final kopf = switch (mode) {
+    GameMode.daily => 'Tessa Tagesrätsel',
+    GameMode.hardcore => 'Tessa Hardcore',
+    _ => 'Tessa',
+  };
   final serie = mode == GameMode.daily && streak > 1 ? ' · Serie $streak Tage' : '';
   return '$kopf\n$score Punkte$serie\nSpielcode $seed\n'
       'Spiel denselben Code und vergleiche.';
@@ -246,6 +250,7 @@ class _GameOverOverlay extends ConsumerWidget {
     final streak = ref.watch(dailyStatusProvider).value?.streak ?? 0;
     final best = ref.watch(bestScoreProvider).value ?? 0;
     final codeBest = ref.watch(bestForCodeProvider(state.seed)).value ?? 0;
+    final hardcoreBest = ref.watch(hardcoreBestProvider).value ?? 0;
     final vorrat = ref.watch(shopProvider).revives;
     final controller = ref.read(gameControllerProvider.notifier);
     final theme = Theme.of(context);
@@ -291,7 +296,23 @@ class _GameOverOverlay extends ConsumerWidget {
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    if (codeBest > 0) ...[
+                    if (mode == GameMode.hardcore) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        hardcoreBest > 0 && state.score >= hardcoreBest
+                            ? 'Neuer Hardcore-Bestwert'
+                            : hardcoreBest > 0
+                                ? 'Dein Hardcore-Bestwert: ${zahl(hardcoreBest)}'
+                                : 'Hardcore — ohne Hinweis, ohne Zurück',
+                        key: const Key('hardcore-result'),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: hardcoreBest > 0 && state.score >= hardcoreBest
+                              ? const Color(0xFF3DD6A0)
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ] else if (codeBest > 0) ...[
                       const SizedBox(height: 8),
                       Text(
                         state.score >= codeBest
@@ -316,7 +337,9 @@ class _GameOverOverlay extends ConsumerWidget {
                     const SizedBox(height: 20),
                     _Analyse(log: ref.watch(roundLogProvider)),
                     const SizedBox(height: 20),
-                    if (vorrat > 0)
+                    if (mode == GameMode.hardcore)
+                      const SizedBox.shrink()
+                    else if (vorrat > 0)
                       FilledButton.icon(
                         key: const Key('revive'),
                         icon: const Icon(Icons.play_arrow_rounded),

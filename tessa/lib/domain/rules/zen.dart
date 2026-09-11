@@ -16,7 +16,7 @@ import 'game_over.dart';
 GameState rescue(GameState state, {int maxHands = 5}) {
   if (!state.isOver) return state;
 
-  final sequence = PieceSequence(state.seed);
+  final sequence = PieceSequence(state.seed, set: state.pieces);
   var handIndex = state.handIndex;
   var hand = state.hand;
 

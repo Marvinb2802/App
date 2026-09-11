@@ -28,7 +28,10 @@ class HintController extends Notifier<HintState> {
   /// Sucht einen Zug und zeigt ihn an. False, wenn keiner mehr uebrig ist
   /// oder nichts mehr passt.
   bool request() {
-    final unbegrenzt = ref.read(gameModeProvider) == GameMode.practice;
+    final mode = ref.read(gameModeProvider);
+    // Im Hardcore-Modus gibt es keinen Hinweis — auch keinen gekauften.
+    if (!allowsHelp(mode)) return false;
+    final unbegrenzt = mode == GameMode.practice;
     if (!unbegrenzt && !state.canAsk) return false;
 
     final game = ref.read(gameControllerProvider);
