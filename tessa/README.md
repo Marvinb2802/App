@@ -9,8 +9,20 @@ vergleichen und ausreizen — siehe `CLAUDE.md`.
 
 ## Spielen ohne Installation
 
-Die Web-Fassung liegt unter `../docs/` und wird über GitHub Pages
-ausgeliefert. Im Browser fehlen Vibration und Käufe; alles andere funktioniert.
+Die Web-Fassung liegt unter `../docs/` und wird über GitHub Pages ausgeliefert.
+Sie lässt sich auf den Startbildschirm legen (Safari: Teilen → „Zum
+Home-Bildschirm") und läuft dann **auch ohne Internet**. Im Browser fehlen
+Vibration und Käufe; alles andere funktioniert.
+
+Neu bauen und ausliefern:
+
+```bash
+flutter build web --release --base-href /App/ --no-web-resources-cdn
+python3 tool/make_web.py
+```
+
+`make_web.py` dünnt CanvasKit aus, erzeugt den Service Worker mit der
+Dateiliste fürs Offline-Spielen und setzt `.nojekyll`.
 
 ## Auf dem eigenen Rechner starten
 

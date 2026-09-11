@@ -184,6 +184,26 @@ lassen:
 
 Getestet ist der Ablauf gegen eine Attrappe, nicht gegen einen echten Store.
 
+## Web-Fassung und Offline
+
+Ausgeliefert wird aus `docs/` über GitHub Pages. Der Ablauf steht in
+`README.md`; `tool/make_web.py` erledigt dabei drei Dinge, die der Flutter-Build
+nicht abnimmt:
+
+- **CanvasKit ausdünnen.** Der Build legt jede Renderer-Variante ab (37 MB).
+  Bei `renderer: canvaskit` wird nur CanvasKit selbst und die Chromium-Fassung
+  angefordert; der Rest fliegt raus (rund 24 MB gespart).
+- **Service Worker erzeugen.** Flutters mitgelieferter Worker *meldet sich seit
+  Version 3.x selbst ab* und speichert nichts zwischen — ohne eigenen gibt es
+  kein Offline-Spielen. Der erzeugte Worker legt beim ersten Besuch alles ab
+  und liefert danach aus dem Speicher; seine Version ist ein Fingerabdruck über
+  alle Dateien, damit eine neue Fassung die alte sicher ablöst.
+- **`.nojekyll`** setzen.
+
+CanvasKit liegt bewusst lokal im Repo (14 MB) statt von Googles CDN zu kommen:
+sonst wäre die Seite ohne Verbindung nicht zu öffnen, und der Startbildschirm-
+Eintrag auf dem Telefon wäre nutzlos.
+
 ## Für echte Geräte
 
 - **Paket-Kennung:** `de.marvinb.tessa`, gesetzt für Android, iOS, macOS und

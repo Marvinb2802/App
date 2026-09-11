@@ -42,5 +42,17 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Eigener Dienst fuers Offline-Spielen. Flutters mitgelieferter Worker
+    // meldet sich seit Version 3.x selbst ab und speichert nichts zwischen —
+    // deshalb ein eigener, den tool/make_web.py mit der Dateiliste erzeugt.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('tessa_sw.js').catch(function () {
+          // Ohne Dienst laeuft Tessa weiter, nur nicht offline.
+        });
+      });
+    }
+  </script>
 </body>
 </html>
