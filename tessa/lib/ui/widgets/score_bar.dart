@@ -42,14 +42,7 @@ class ScoreBar extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(
-                      zahl(state.score),
-                      key: const Key('score'),
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -1,
-                      ),
-                    ),
+                    const _PunkteZahl(),
                     Text(
                       _untertitel(mode, state.seed),
                       key: const Key('seed'),
@@ -123,6 +116,74 @@ class ScoreBar extends ConsumerWidget {
         GameMode.hardcore => 'Hardcore · Spielcode $seed',
         GameMode.normal => 'Spielcode $seed',
       };
+}
+
+/// Die Punktzahl — und ein kurzer Satz nach oben, sobald sie steigt.
+///
+/// Eigener Zustand, weil die Leiste sonst nichts zu merken haette: die
+/// Bewegung haengt an der *Aenderung*, nicht am Wert.
+class _PunkteZahl extends ConsumerStatefulWidget {
+  const _PunkteZahl();
+
+  static const Duration duration = Duration(milliseconds: 320);
+
+  @override
+  ConsumerState<_PunkteZahl> createState() => _PunkteZahlState();
+}
+
+class _PunkteZahlState extends ConsumerState<_PunkteZahl>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pop = AnimationController(
+    vsync: this,
+    duration: _PunkteZahl.duration,
+  );
+
+  @override
+  void dispose() {
+    _pop.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(gameControllerProvider, (previous, next) {
+      if (previous != null && next.score > previous.score) {
+        _pop.forward(from: 0);
+      }
+    });
+
+    final theme = Theme.of(context);
+    final punkte = ref.watch(gameControllerProvider).score;
+
+    return AnimatedBuilder(
+      animation: _pop,
+      builder: (context, _) {
+        final t = _pop.value;
+        // Schnell auf, langsam zurueck — wie ein Herzschlag.
+        final schwung = t == 0 || t == 1
+            ? 0.0
+            : t < 0.35
+                ? Curves.easeOut.transform(t / 0.35)
+                : 1 - Curves.easeOut.transform((t - 0.35) / 0.65);
+        return Transform.scale(
+          scale: 1 + 0.22 * schwung,
+          child: Text(
+            zahl(punkte),
+            key: const Key('score'),
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -1,
+              color: Color.lerp(
+                theme.colorScheme.onSurface,
+                Colors.white,
+                schwung,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// Der eigene Hardcore-Bestwert — die Messlatte dieses Modus.

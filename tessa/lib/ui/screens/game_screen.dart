@@ -9,6 +9,8 @@ import '../../application/level_controller.dart';
 import '../../application/providers.dart';
 import '../../domain/model/board.dart';
 import '../widgets/board_view.dart';
+import '../widgets/clear_banner.dart';
+import '../widgets/screen_shake.dart';
 import '../../domain/model/level.dart';
 import '../widgets/level_banner.dart';
 import '../widgets/move_feedback.dart';
@@ -41,17 +43,26 @@ class GameScreen extends ConsumerWidget {
             final cellSize = side / Board.size;
             return Stack(
               children: [
-                Column(
-                  children: [
-                    const ScoreBar(),
-                    if (imLevel) const LevelBanner() else const MoveFeedback(),
-                    Expanded(
-                      child: Center(child: BoardView(cellSize: cellSize)),
-                    ),
-                    PieceTray(boardCellSize: cellSize),
-                    const SizedBox(height: 8),
-                  ],
+                // Faellt eine Linie, bekommt das ganze Bild einen Schlag.
+                ScreenShake(
+                  child: Column(
+                    children: [
+                      const ScoreBar(),
+                      if (imLevel)
+                        const LevelBanner()
+                      else
+                        const MoveFeedback(),
+                      Expanded(
+                        child: Center(child: BoardView(cellSize: cellSize)),
+                      ),
+                      PieceTray(boardCellSize: cellSize),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
                 ),
+                // Das grosse Wort liegt ueber dem Brett und wackelt nicht mit —
+                // es soll lesbar bleiben.
+                const Positioned.fill(child: Center(child: ClearBanner())),
                 if (imLevel && session.outcome != LevelOutcome.playing)
                   _LevelOverlay(session: session)
                 else if (isOver && !imLevel)

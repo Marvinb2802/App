@@ -401,6 +401,25 @@ tessa/
   Zellen, die im selben Zug wieder gefallen sind, springen nicht auf — sie
   gehören zum Nachleuchten. Dafür führt `MoveOutcome` die belegten Zellen mit,
   nicht nur ihre Anzahl (`placedCellCount`).
+- **Wenn Linien fallen, passiert etwas.** Fünf Dinge auf einmal, alle in
+  `ui/widgets/clear_effects.dart` gebündelt und von einer Regel ausgelöst
+  (`neuerZug` — neue Punktzahl, anderer Zug; ein Undo löst nichts aus):
+  - ein **Lichtbalken** fährt durch jede gefallene Linie,
+  - die Zellen reißen weiß auf und wachsen auf das 1,85-fache (`clear-flash`),
+  - **Funken** fliegen auseinander und fallen nach unten (`clear-burst`,
+    ein `CustomPainter` — sechs je Zelle, gedeckelt auf 220, damit auch vier
+    Linien auf einem alten Telefon flüssig bleiben),
+  - eine **Druckwelle** läuft nach außen, ab drei Linien blitzt das ganze
+    Brett kurz weiß,
+  - das **ganze Bild bekommt einen Schlag** (`ScreenShake`, 3–15 px je nach
+    Linienzahl, klingt in 380 ms aus) und mitten im Bild poppt das Wort zum
+    Zug auf: GUT, DOPPEL, DREIFACH, VIERFACH, UNFASSBAR — samt Punkten und
+    Combo (`ClearBanner`).
+
+  Dazu springt die Punktzahl in der Leiste kurz an, sobald sie steigt. Die
+  Funken werden **einmal je Zug** gewürfelt (aus Spielcode und Punktstand),
+  nicht je Bild — sonst zappeln sie, statt zu fliegen. Wer im System
+  „Bewegung reduzieren" eingeschaltet hat, bekommt das Rütteln nicht zu sehen.
 - Zurück-Knopf in der Spielleiste, Ergebnis-Teilen über die Zwischenablage,
   Statistik (Runden, Bestwert, Durchschnitt, Serie) und abschaltbare Vibration.
 - **Töne:** `assets/sounds/` wird von `tool/`-freiem Python-Skript erzeugt
@@ -409,10 +428,14 @@ tessa/
   wie die Vibration.
   `SoundOutput` trennt das Abspielen vom Rest, damit Tests prüfen können,
   *welcher* Klang zu welchem Zug gehört, ohne etwas abzuspielen.
-- Tempo und Stärke beider Animationen sind nach Gefühl gesetzt und in der
-  Entwicklungsumgebung von niemandem gesehen worden. Sie gehören am Gerät
-  nachjustiert: `flashDuration`, `popDuration` und die beiden Faktoren in
-  `_clearFlash` und `_maybePop`.
+- Tempo und Stärke aller Animationen sind nach Gefühl gesetzt und in der
+  Entwicklungsumgebung von niemandem gesehen worden — hier rendert nichts. Sie
+  gehören am Gerät nachjustiert, und dafür steht jede Stellschraube an genau
+  einer Stelle: `BoardView.flashDuration`, `BoardView.popDuration`,
+  `ClearBurst.duration`, `ScreenShake.duration`, `ClearBanner.duration`,
+  `funkenJeZelle`, `maxFunken`, `funkenFall` und `ruettelWeite`.
+  Was die Tests prüfen können, prüfen sie: dass sich etwas bewegt, in welche
+  Richtung, wie lange — und dass mehr Linien stärker wackeln.
 
 `Size.fromHeight(x)` als `minimumSize` einer Schaltfläche bedeutet
 *unendliche* Mindestbreite. Das sprengt jeden Knopf, der nicht in einer
@@ -432,6 +455,13 @@ das Teil versetzt über dem Finger, muss `feedbackOffset` den Trefferpunkt
 mitziehen — sonst sind Ränder unerreichbar. Genau das war der Fall: die unterste
 Brettreihe ließ sich mit keinem Teil belegen, weil der Finger dabei unter dem
 Brett lag. Gesten-Tests gehören deshalb an die Ränder, nicht in die Mitte.
+
+Ein Widget, das seinen Kindbaum **nur manchmal** einpackt, setzt darunter
+alles zurück. `ScreenShake` hat den `Transform` anfangs nur während des
+Rüttelns eingehängt — Flutter sah eine andere Baumform, baute darunter neu auf,
+und das Brett verlor mitten im Zug seinen Zustand samt laufender Animation. Ein
+bestehender Test hat das gefangen. Regel: die Form des Baums bleibt gleich, nur
+die Werte ändern sich (hier: Verschiebung null, wenn nichts wackelt).
 
 Beim Prüfen von Animationen im Test: `Matrix4.getMaxScaleOnAxis()` nimmt die
 Z-Achse mit, die bei `Transform.scale` immer 1 bleibt — Werte unter 1 sind

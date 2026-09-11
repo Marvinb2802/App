@@ -7,7 +7,10 @@ import '../../domain/model/board.dart';
 import '../../domain/model/cell.dart';
 import '../../domain/model/game_state.dart';
 import '../../domain/model/piece.dart';
+import '../../application/shop.dart';
+import '../theme/tessa_theme.dart';
 import 'cell_tile.dart';
+import 'clear_effects.dart';
 
 /// Wo der Finger relativ zur linken oberen Ecke des gezogenen Teils liegt.
 ///
@@ -65,8 +68,25 @@ class _BoardViewState extends ConsumerState<BoardView>
       }
     });
 
+  /// Der Ausbruch: Lichtbalken, Funken, Druckwelle.
+  late final AnimationController _burst = AnimationController(
+    vsync: this,
+    duration: ClearBurst.duration,
+  )..addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        setState(() {
+          _burstMove = null;
+          _funken = const [];
+        });
+      }
+    });
+
   /// Der Zug, dessen Linien gerade nachleuchten.
   MoveOutcome? _flashedMove;
+
+  /// Der Zug, der gerade explodiert, samt seiner Funken.
+  MoveOutcome? _burstMove;
+  List<Funke> _funken = const [];
 
   /// Die Zellen, die gerade aufspringen.
   Set<Cell> _poppingCells = const {};
@@ -75,6 +95,7 @@ class _BoardViewState extends ConsumerState<BoardView>
   void dispose() {
     _flash.dispose();
     _pop.dispose();
+    _burst.dispose();
     super.dispose();
   }
 
@@ -84,11 +105,8 @@ class _BoardViewState extends ConsumerState<BoardView>
   /// Nur bei einem *neuen* Zug. Ein Undo stellt einen aelteren Zug wieder her
   /// und senkt die Punktzahl; dabei soll sich nichts ruehren.
   void _onStateChanged(GameState? previous, GameState next) {
-    if (previous == null) return;
-    final move = next.lastMove;
+    final move = neuerZug(previous, next);
     if (move == null) return;
-    if (next.score <= previous.score) return;
-    if (identical(move, previous.lastMove)) return;
 
     // Zellen, die im selben Zug wieder gefallen sind, springen nicht auf —
     // sie gehoeren zum Nachleuchten.
@@ -96,12 +114,28 @@ class _BoardViewState extends ConsumerState<BoardView>
         .where((cell) => next.board.isFilled(cell.x, cell.y))
         .toSet();
 
+    final farben = piecePalettes[ref.read(shopProvider).palette] ??
+        piecePalettes['standard']!;
+
     setState(() {
       _poppingCells = gelegt;
-      if (move.didClear) _flashedMove = move;
+      if (move.didClear) {
+        _flashedMove = move;
+        _burstMove = move;
+        // Einmal je Zug gewuerfelt, nicht je Bild — sonst zappeln die Funken.
+        _funken = funkenFuer(
+          move,
+          cellSize: widget.cellSize,
+          farben: farben,
+          seed: next.seed + next.score,
+        );
+      }
     });
     if (gelegt.isNotEmpty) _pop.forward(from: 0);
-    if (move.didClear) _flash.forward(from: 0);
+    if (move.didClear) {
+      _flash.forward(from: 0);
+      _burst.forward(from: 0);
+    }
   }
 
   /// Rechnet die linke obere Ecke des gezogenen Teils in ein Feld um.
@@ -132,11 +166,14 @@ class _BoardViewState extends ConsumerState<BoardView>
         width: side,
         height: side,
         child: Stack(
+          // Die Funken fliegen ueber den Brettrand hinaus.
+          clipBehavior: Clip.none,
           children: [
             _grid(context),
             _clearFlash(context),
             ..._hint(context),
             ..._preview(context),
+            ..._burstLayer(),
           ],
         ),
       ),
@@ -203,7 +240,7 @@ class _BoardViewState extends ConsumerState<BoardView>
         final fortschritt = _flash.value;
         return IgnorePointer(
           child: Opacity(
-            opacity: 1 - fortschritt,
+            opacity: (1 - fortschritt) * (1 - fortschritt * 0.4),
             child: Stack(
               key: const Key('clear-flash'),
               clipBehavior: Clip.none,
@@ -213,11 +250,14 @@ class _BoardViewState extends ConsumerState<BoardView>
                     left: cell.x * widget.cellSize,
                     top: cell.y * widget.cellSize,
                     child: Transform.scale(
-                      scale: 1 + 0.3 * fortschritt,
+                      // Kraeftiger als ein blosses Verblassen: die Zelle
+                      // reisst auf, wird weiss und faellt dann in die
+                      // Spielfarbe zurueck.
+                      scale: 1 + 0.85 * Curves.easeOutCubic.transform(fortschritt),
                       child: CellTile(
                         size: widget.cellSize,
                         color: Color.lerp(
-                          scheme.onPrimaryContainer,
+                          Colors.white,
                           scheme.primary,
                           fortschritt,
                         )!,
@@ -230,6 +270,23 @@ class _BoardViewState extends ConsumerState<BoardView>
         );
       },
     );
+  }
+
+  /// Der Ausbruch liegt ueber allem — er soll nichts verdecken, was man
+  /// anfassen kann, deshalb ist er durchlaessig fuer Beruehrungen.
+  List<Widget> _burstLayer() {
+    final move = _burstMove;
+    if (move == null || _funken.isEmpty) return const [];
+    return [
+      Positioned.fill(
+        child: ClearBurst(
+          move: move,
+          funken: _funken,
+          cellSize: widget.cellSize,
+          animation: _burst,
+        ),
+      ),
+    ];
   }
 
   /// Zeigt den Vorschlag des Hinweis-Knopfes als Umriss auf dem Brett.
