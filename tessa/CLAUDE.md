@@ -184,6 +184,26 @@ lassen:
 
 Getestet ist der Ablauf gegen eine Attrappe, nicht gegen einen echten Store.
 
+## Für echte Geräte
+
+- **Paket-Kennung:** `de.marvinb.tessa`, gesetzt für Android, iOS, macOS und
+  Linux. Sie ist nach einer Veröffentlichung **nicht mehr änderbar**. Der
+  Platzhalter `de.deinname.tessa` aus `flutter create` wurde ersetzt.
+- **Anzeigename:** Tessa (Android-Manifest, iOS `CFBundleName` und
+  `CFBundleDisplayName`, Web-Manifest und Seitentitel).
+- **Ausrichtung:** Hochformat auf Telefonen; das iPad darf drehen.
+- **Startbildschirm** in der Hintergrundfarbe der App (`#0E1118`), damit beim
+  Starten nichts weiß aufblitzt — Android `launch_background.xml` und
+  `styles.xml`, iOS `LaunchScreen.storyboard`.
+- **Symbol:** wird erzeugt, nicht gezeichnet — `tool/make_icon.py` (Pillow)
+  malt vier Blöcke in den Spielfarben, `dart run flutter_launcher_icons`
+  verteilt sie. Für Android liegt der Vordergrund im inneren Fünftel, weil das
+  System die Ecken beschneidet.
+- **Nicht geprüft:** In dieser Umgebung gibt es kein Android SDK und kein
+  Xcode. `flutter build apk` und `flutter build ipa` sind hier nie gelaufen —
+  die Anleitung dazu steht in `README.md`, der erste echte Build muss auf einem
+  Rechner mit Werkzeugkette stattfinden.
+
 ## Technik
 
 - **Flutter**, Zielgröße der App unter 60 MB. Abhängigkeiten sparsam halten;

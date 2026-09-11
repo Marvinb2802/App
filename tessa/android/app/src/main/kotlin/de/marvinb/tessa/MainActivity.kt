@@ -1,4 +1,4 @@
-package de.deinname.tessa
+package de.marvinb.tessa
 
 import io.flutter.embedding.android.FlutterActivity
 
