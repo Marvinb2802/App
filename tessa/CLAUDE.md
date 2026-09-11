@@ -243,7 +243,8 @@ tessa/
 │  │  ├─ score_dao.dart            Bestenliste mit Seed je Runde
 │  │  └─ settings_repository.dart  Einstellungen als Schlüssel-Wert-Paare
 │  ├─ ui/
-│  │  ├─ screens/                  home_screen (Einstieg), game_screen samt
+│  │  ├─ screens/                  home_screen (Einstieg, in Blöcken),
+│  │  │                            week_screen, levels_screen, game_screen samt
 │  │  │                            Abschlussanzeige, scores_screen,
 │  │  │                            stats_screen (Zahlen und Einstellungen)
 │  │  ├─ widgets/                  board_view, piece_tray, piece_view,
@@ -354,6 +355,11 @@ erst beim ersten gelegten Teil anfängt, ist zu spät — dann bleibt es stumm.
 **Vibration im Browser ist nicht möglich.** `HapticFeedback` läuft über einen
 Plattformkanal, den es im Web nicht gibt; iOS-Safari kennt überhaupt keine
 Vibrations-Schnittstelle. Die Einstellung ist dort abgeblendet und beschriftet.
+
+Der Startbildschirm ist bewusst **keine `ListView`**: sie baut nur, was gerade
+sichtbar ist, und Tests fanden die unteren Einträge nicht. Für eine kurze Seite
+ist `SingleChildScrollView` + `Column` richtig — alles steht sofort im Baum,
+auch für Vorlesefunktionen.
 
 Widget-Tests mounten den Bildschirm, um den es geht, direkt in einer
 `MaterialApp` — nicht `TessaApp`, deren Einstieg der Startbildschirm ist.

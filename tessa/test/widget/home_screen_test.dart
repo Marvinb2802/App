@@ -216,4 +216,43 @@ void main() {
     await tapKey(tester, const Key('home-stats'));
     expect(find.byType(StatsScreen), findsOneWidget);
   });
+  testWidgets('die Startseite ist in Bloecke geteilt', (tester) async {
+    await pumpHome(tester);
+
+    // Ueberschriften der Bloecke.
+    expect(find.text('HEUTE'), findsOneWidget);
+    expect(find.text('LEVEL'), findsOneWidget);
+    expect(find.text('WEITERE SPIELARTEN'), findsOneWidget);
+
+    // Jede Spielart steht als eigene Zeile mit Erklaerung da.
+    for (final schluessel in const [
+      'new-game',
+      'zen',
+      'rotation',
+      'practice',
+      'home-seed',
+    ]) {
+      expect(find.byKey(Key(schluessel)), findsOneWidget, reason: schluessel);
+    }
+    expect(find.text('Tüfteln'), findsOneWidget);
+    expect(find.textContaining('Unbegrenzt zurück'), findsOneWidget,
+        reason: 'jede Spielart erklaert sich selbst');
+  });
+
+  testWidgets('die Startseite laeuft auf einem schmalen Geraet nicht ueber',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final gefuellt = await openMemory();
+    addTearDown(gefuellt.close);
+    await gefuellt.scores.add(score: 1234567, seed: 4294967295);
+
+    await pumpHome(tester, database: gefuellt, today: DateTime(2026, 9, 10));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('daily-card')), findsOneWidget);
+    expect(find.byKey(const Key('levels')), findsOneWidget);
+  });
 }

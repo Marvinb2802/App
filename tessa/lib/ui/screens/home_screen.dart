@@ -9,11 +9,12 @@ import '../theme/tessa_theme.dart';
 import 'game_screen.dart';
 import 'levels_screen.dart';
 import 'scores_screen.dart';
-import 'week_screen.dart';
 import 'shop_screen.dart';
 import 'stats_screen.dart';
+import 'week_screen.dart';
 
-/// Einstieg: Tagesrätsel, laufende Runde, neue Runde, Tüfteln, Spielcode.
+/// Der Einstieg, in vier Blöcken: laufende Runde, heute, Level, weitere
+/// Spielarten. Unten die Übersichten.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -25,7 +26,7 @@ class HomeScreen extends ConsumerWidget {
     final geschaffteLevel = ref.watch(levelProgressProvider).value ?? 0;
     final theme = Theme.of(context);
 
-    // Eine Runde laeuft, wenn schon etwas auf dem Brett steht.
+    // Eine Runde läuft, wenn schon etwas auf dem Brett steht.
     final laeuft = !state.isOver && (!state.board.isEmpty || state.score > 0);
 
     return Scaffold(
@@ -33,171 +34,104 @@ class HomeScreen extends ConsumerWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 460),
+            // Bewusst keine ListView: die Seite ist kurz, und so steht alles
+            // sofort im Baum — auch fuer Tests und Vorlesefunktionen.
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+              padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'Tessa',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -2,
+                _Kopf(best: best),
+                if (laeuft) ...[
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    key: const Key('continue'),
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    onPressed: () => _open(context),
+                    label: Text('Weiterspielen (${zahl(state.score)} Punkte)'),
+                  ),
+                ],
+                const SizedBox(height: 28),
+                const _Abschnitt('Heute'),
+                _DailyCard(
+                  code: ref.watch(dailyCodeProvider),
+                  playedToday: daily?.playedToday ?? false,
+                  streak: daily?.streak ?? 0,
+                  lastScore: daily?.lastScore,
+                  goal: goalForDate(ref.watch(todayProvider)),
+                  goalReached: daily?.goalReachedToday ?? false,
+                  onPlay: () => _start(context, ref, GameMode.daily,
+                      seed: ref.read(dailyCodeProvider)),
+                ),
+                const SizedBox(height: 24),
+                const _Abschnitt('Level'),
+                _LevelCard(
+                  geschafft: geschaffteLevel,
+                  onPlay: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const LevelsScreen(),
                     ),
                   ),
-                  Text(
-                    'Block-Puzzle',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (best > 0) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      'Bestpunktzahl ${zahl(best)}',
-                      key: const Key('best-score'),
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: tessaAccent,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 28),
-                  _DailyCard(
-                    code: ref.watch(dailyCodeProvider),
-                    playedToday: daily?.playedToday ?? false,
-                    streak: daily?.streak ?? 0,
-                    lastScore: daily?.lastScore,
-                    goal: goalForDate(ref.watch(todayProvider)),
-                    goalReached: daily?.goalReachedToday ?? false,
-                    onPlay: () => _start(context, ref, GameMode.daily,
-                        seed: ref.read(dailyCodeProvider)),
-                  ),
-                  const SizedBox(height: 20),
-                  if (laeuft) ...[
-                    FilledButton(
-                      key: const Key('continue'),
-                      onPressed: () => _open(context),
-                      child: Text('Weiterspielen (${zahl(state.score)} Punkte)'),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  (laeuft ? OutlinedButton.new : FilledButton.new)(
-                    key: const Key('new-game'),
-                    onPressed: () => _start(context, ref, GameMode.normal),
-                    child: const Text('Neue Runde'),
-                  ),
-                  const SizedBox(height: 10),
-                  FilledButton(
-                    key: const Key('levels'),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const LevelsScreen(),
-                      ),
-                    ),
-                    child: Text(
-                      geschaffteLevel == 0
-                          ? 'Level spielen'
-                          : 'Level $geschaffteLevel geschafft — weiter',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton(
-                    key: const Key('zen'),
-                    onPressed: () => _start(context, ref, GameMode.zen),
-                    child: const Text('Zen — ohne Spielende'),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton(
-                    key: const Key('rotation'),
-                    onPressed: () => _start(context, ref, GameMode.rotation),
-                    child: const Text('Drehen erlaubt'),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
-                    child: Text(
-                      'Antippen dreht ein Teil, Ziehen legt es.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton(
-                    key: const Key('practice'),
-                    onPressed: () => _start(context, ref, GameMode.practice),
-                    child: const Text('Tüfteln'),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
-                    child: Text(
-                      'Unbegrenzt zurück: Weil der Spielcode die ganze '
-                      'Steinfolge festlegt, ist jede Runde ein lösbares '
-                      'Rätsel — probiere aus, wie viele Punkte drinstecken.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    key: const Key('home-seed'),
-                    onPressed: () => _askForCode(context, ref),
-                    child: const Text('Mit Spielcode spielen'),
-                  ),
-                  const Divider(height: 32),
-                  // Umbrechend statt nebeneinander: drei Knoepfe passen auf
-                  // schmalen Geraeten nicht in eine Zeile.
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 4,
+                ),
+                const SizedBox(height: 24),
+                const _Abschnitt('Weitere Spielarten'),
+                Card(
+                  child: Column(
                     children: [
-                      TextButton.icon(
-                        key: const Key('home-scores'),
-                        icon: const Icon(Icons.emoji_events_outlined),
-                        label: const Text('Bestenliste'),
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const ScoresScreen(),
-                          ),
-                        ),
+                      _Spielart(
+                        schluessel: 'new-game',
+                        symbol: Icons.casino_outlined,
+                        name: 'Neue Runde',
+                        erklaerung: 'Zufälliger Spielcode, drei Undo, '
+                            'bis nichts mehr passt.',
+                        onTap: () => _start(context, ref, GameMode.normal),
                       ),
-                      TextButton.icon(
-                        key: const Key('home-week'),
-                        icon: const Icon(Icons.date_range_outlined),
-                        label: const Text('Woche'),
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const WeekScreen(),
-                          ),
-                        ),
+                      _Spielart(
+                        schluessel: 'zen',
+                        symbol: Icons.all_inclusive_rounded,
+                        name: 'Zen',
+                        erklaerung: 'Kein Spielende. Geht nichts mehr, wird '
+                            'Platz geschaffen.',
+                        onTap: () => _start(context, ref, GameMode.zen),
                       ),
-                      TextButton.icon(
-                        key: const Key('home-shop'),
-                        icon: const Icon(Icons.star_outline_rounded),
-                        label: const Text('Shop'),
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const ShopScreen(),
-                          ),
-                        ),
+                      _Spielart(
+                        schluessel: 'rotation',
+                        symbol: Icons.rotate_right_rounded,
+                        name: 'Drehen erlaubt',
+                        erklaerung: 'Antippen dreht ein Teil, Ziehen legt es.',
+                        onTap: () => _start(context, ref, GameMode.rotation),
                       ),
-                      TextButton.icon(
-                        key: const Key('home-stats'),
-                        icon: const Icon(Icons.insights_outlined),
-                        label: const Text('Statistik'),
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const StatsScreen(),
-                          ),
-                        ),
+                      _Spielart(
+                        schluessel: 'practice',
+                        symbol: Icons.undo_rounded,
+                        name: 'Tüfteln',
+                        erklaerung: 'Unbegrenzt zurück: Weil der Spielcode die '
+                            'Steinfolge festlegt, ist jede Runde ein lösbares '
+                            'Rätsel — reize sie aus.',
+                        onTap: () => _start(context, ref, GameMode.practice),
+                      ),
+                      _Spielart(
+                        schluessel: 'home-seed',
+                        symbol: Icons.tag_rounded,
+                        name: 'Mit Spielcode',
+                        erklaerung: 'Eine bestimmte Runde nachspielen oder '
+                            'dich mit anderen vergleichen.',
+                        letzte: true,
+                        onTap: () => _askForCode(context, ref),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+                const _Fusszeile(),
+                const SizedBox(height: 8),
+                Text(
+                  'Bestpunktzahl und Fortschritt bleiben auf diesem Gerät.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant
+                        .withValues(alpha: 0.7),
+                    ),
                   ),
                 ],
               ),
@@ -218,8 +152,8 @@ class HomeScreen extends ConsumerWidget {
     _open(context);
   }
 
-  /// Eine Runde laesst sich gezielt nachspielen — dafuer steht der Spielcode
-  /// ueberall sichtbar (siehe Fairness-Garantie in CLAUDE.md).
+  /// Eine Runde lässt sich gezielt nachspielen — dafür steht der Spielcode
+  /// überall sichtbar (siehe Fairness-Garantie in CLAUDE.md).
   Future<void> _askForCode(BuildContext context, WidgetRef ref) async {
     final code = await showDialog<int>(
       context: context,
@@ -227,6 +161,230 @@ class HomeScreen extends ConsumerWidget {
     );
     if (code == null || !context.mounted) return;
     _start(context, ref, GameMode.normal, seed: code);
+  }
+}
+
+class _Kopf extends StatelessWidget {
+  const _Kopf({required this.best});
+
+  final int best;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Text(
+          'Tessa',
+          style: theme.textTheme.displaySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1.5,
+          ),
+        ),
+        if (best > 0)
+          Text(
+            'Bestpunktzahl ${zahl(best)}',
+            key: const Key('best-score'),
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: tessaAccent,
+              fontWeight: FontWeight.w700,
+            ),
+          )
+        else
+          Text(
+            'Block-Puzzle',
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Eine Überschrift über einem Block.
+class _Abschnitt extends StatelessWidget {
+  const _Abschnitt(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        text.toUpperCase(),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+      ),
+    );
+  }
+}
+
+/// Eine Zeile in der Liste der Spielarten: Name und was sie ausmacht.
+class _Spielart extends StatelessWidget {
+  const _Spielart({
+    required this.schluessel,
+    required this.symbol,
+    required this.name,
+    required this.erklaerung,
+    required this.onTap,
+    this.letzte = false,
+  });
+
+  final String schluessel;
+  final IconData symbol;
+  final String name;
+  final String erklaerung;
+  final VoidCallback onTap;
+  final bool letzte;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        ListTile(
+          key: Key(schluessel),
+          onTap: onTap,
+          leading: Icon(symbol, color: tessaAccent),
+          title: Text(
+            name,
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text(
+            erklaerung,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+        ),
+        if (!letzte) const Divider(height: 1, indent: 56),
+      ],
+    );
+  }
+}
+
+class _LevelCard extends StatelessWidget {
+  const _LevelCard({required this.geschafft, required this.onPlay});
+
+  final int geschafft;
+  final VoidCallback onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.flag_rounded, color: tessaAccent),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    geschafft == 0 ? 'Level' : 'Level ${geschafft + 1}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              geschafft == 0
+                  ? 'Jedes Level hat ein eigenes Ziel, begrenzte Züge und ein '
+                      'teils vorbelegtes Brett. Es wird Stück für Stück enger.'
+                  : 'Geschafft bis Level $geschafft. Weiter geht es mit '
+                      '${geschafft + 1}.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              key: const Key('levels'),
+              onPressed: onPlay,
+              child: Text(geschafft == 0 ? 'Level spielen' : 'Weiter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Fusszeile extends StatelessWidget {
+  const _Fusszeile();
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 4,
+      children: [
+        _FussKnopf(
+          schluessel: 'home-scores',
+          symbol: Icons.emoji_events_outlined,
+          name: 'Bestenliste',
+          ziel: const ScoresScreen(),
+        ),
+        _FussKnopf(
+          schluessel: 'home-week',
+          symbol: Icons.date_range_outlined,
+          name: 'Woche',
+          ziel: const WeekScreen(),
+        ),
+        _FussKnopf(
+          schluessel: 'home-shop',
+          symbol: Icons.star_outline_rounded,
+          name: 'Shop',
+          ziel: const ShopScreen(),
+        ),
+        _FussKnopf(
+          schluessel: 'home-stats',
+          symbol: Icons.insights_outlined,
+          name: 'Statistik',
+          ziel: const StatsScreen(),
+        ),
+      ],
+    );
+  }
+}
+
+class _FussKnopf extends StatelessWidget {
+  const _FussKnopf({
+    required this.schluessel,
+    required this.symbol,
+    required this.name,
+    required this.ziel,
+  });
+
+  final String schluessel;
+  final IconData symbol;
+  final String name;
+  final Widget ziel;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      key: Key(schluessel),
+      icon: Icon(symbol, size: 18),
+      label: Text(name),
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => ziel),
+      ),
+    );
   }
 }
 
@@ -263,10 +421,16 @@ class _DailyCard extends StatelessWidget {
               children: [
                 const Icon(Icons.today_rounded, color: tessaAccent),
                 const SizedBox(width: 8),
-                Text(
-                  'Tagesrätsel',
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                // Nachgiebig: auf schmalen Geraeten darf die Ueberschrift
+                // kuerzen, statt die Zeile zu sprengen.
+                Flexible(
+                  child: Text(
+                    'Tagesrätsel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                 ),
                 const Spacer(),
                 if (streak > 0)
@@ -280,7 +444,7 @@ class _DailyCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               playedToday
-                  ? 'Heute gespielt${lastScore == null ? '' : ': $lastScore Punkte'}. '
+                  ? 'Heute gespielt${lastScore == null ? '' : ': ${zahl(lastScore!)} Punkte'}. '
                       'Du kannst es erneut versuchen.'
                   : 'Jeden Tag dieselbe Runde für alle. Spielcode $code.',
               style: theme.textTheme.bodyMedium?.copyWith(
