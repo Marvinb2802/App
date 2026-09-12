@@ -1,0 +1,10 @@
+{
+  "_hinweis": "Vor der Veröffentlichung ausfüllen. Solange hier eckige Klammern stehen, zeigt die App einen Warnhinweis und die Texte sind nicht verwendbar.",
+  "name": "[DEIN VOLLER NAME]",
+  "strasse": "[STRASSE UND HAUSNUMMER]",
+  "ort": "[PLZ UND ORT]",
+  "land": "Deutschland",
+  "email": "[DEINE E-MAIL-ADRESSE]",
+  "umsatzsteuerId": "",
+  "stand": "September 2026"
+}
